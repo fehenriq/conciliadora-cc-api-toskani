@@ -4,24 +4,29 @@ from typing import Optional
 from ninja import Schema
 
 
-class InstallmentSchema(Schema):
-    id: uuid.UUID
-    installment_number: int
-    fee: float
-
-
 class InstallmentInputSchema(Schema):
     installment_number: int
     fee: float
+
+
+class InstallmentSchema(InstallmentInputSchema):
+    id: uuid.UUID
 
 
 class InstallmentUpdateSchema(Schema):
     fee: Optional[float] = None
 
 
+class OmieAccountSchema(Schema):
+    id: uuid.UUID
+    omie_id: int
+    account_number: str
+    description: str
+
+
 class AccountSchema(Schema):
     id: uuid.UUID
-    account_number: str
+    omie_account: OmieAccountSchema
     acquirer: str
     settle: bool
     days_to_receive: int
@@ -29,7 +34,7 @@ class AccountSchema(Schema):
 
 
 class AccountUpdateSchema(Schema):
-    account_number: Optional[str] = None
+    omie_account: Optional[uuid.UUID] = None
     acquirer: Optional[str] = None
     settle: Optional[bool] = None
     days_to_receive: Optional[int] = None
@@ -41,8 +46,13 @@ class AccountListSchema(Schema):
 
 
 class AccountInputSchema(Schema):
-    account_number: str
+    omie_account: uuid.UUID
     acquirer: str
     settle: bool
     days_to_receive: int
     installments: list[InstallmentInputSchema]
+
+
+class OmieAccountListSchema(Schema):
+    total: int
+    omie_accounts: list[OmieAccountSchema]

@@ -3,8 +3,8 @@ from http import HTTPStatus
 
 from ninja.errors import HttpError
 
-from .models import Account, Installment
-from .schema import (
+from apps.accounts.models import Account, Installment, OmieAccount
+from apps.accounts.schema import (
     AccountInputSchema,
     AccountUpdateSchema,
     InstallmentInputSchema,
@@ -16,8 +16,14 @@ class AccountService:
     def get_all_accounts(self):
         return Account.objects.all()
 
+    def get_all_omie_accounts(self):
+        return OmieAccount.objects.all()
+
     def get_account_by_id(self, account_id: uuid.UUID):
         return Account.objects.filter(id=account_id).first()
+
+    def get_omie_account_by_id(self, omie_account_id: uuid.UUID):
+        return OmieAccount.objects.filter(id=omie_account_id).first()
 
     def get_installment_by_account_and_number(
         self, account: Account, installment_number: int
@@ -38,8 +44,11 @@ class AccountService:
         return account
 
     def create_account(self, input_data: AccountInputSchema):
+        if not (omie_account := self.get_omie_account_by_id(input_data.omie_account)):
+            raise HttpError(HTTPStatus.NOT_FOUND, "Conta Omie não encontrada")
+
         account = Account.objects.create(
-            account_number=input_data.account_number,
+            omie_account=omie_account,
             acquirer=input_data.acquirer,
             settle=input_data.settle,
             days_to_receive=input_data.days_to_receive,
@@ -61,6 +70,10 @@ class AccountService:
         for attr, value in input_data.model_dump(
             exclude_defaults=True, exclude_unset=True
         ).items():
+            if attr == "omie_account":
+                if not (value := self.get_omie_account_by_id(input_data.omie_account)):
+                    raise HttpError(HTTPStatus.NOT_FOUND, "Conta Omie não encontrada")
+
             setattr(account, attr, value)
 
         account.save()
@@ -105,3 +118,9 @@ class AccountService:
         installment.save()
 
         return account
+
+    def list_omie_accounts(self, **kwargs):
+        accounts = self.get_all_omie_accounts()
+        total = accounts.count()
+        data = {"total": total, "omie_accounts": accounts}
+        return data

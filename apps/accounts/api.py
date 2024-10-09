@@ -10,10 +10,11 @@ from .schema import (
     AccountSchema,
     AccountUpdateSchema,
     InstallmentInputSchema,
-    InstallmentSchema,
     InstallmentUpdateSchema,
+    OmieAccountListSchema,
 )
-from .service import AccountService
+from .services.account_service import AccountService
+from .services.omie_service import get_omie_accounts
 
 account_router = Router(auth=JWTAuth())
 service = AccountService()
@@ -62,3 +63,15 @@ def update_installment(
 ):
     decode_jwt_token(request.headers.get("Authorization"))
     return service.update_installment(account_id, installment_number, payload)
+
+
+@account_router.get("/omie", response=OmieAccountListSchema)
+def list_omie_accounts(request):
+    decode_jwt_token(request.headers.get("Authorization"))
+    return service.list_omie_accounts(**request.GET.dict())
+
+
+@account_router.post("/omie", response=str)
+def sync_omie(request):
+    decode_jwt_token(request.headers.get("Authorization"))
+    return get_omie_accounts()
