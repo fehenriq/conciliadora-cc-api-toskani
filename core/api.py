@@ -2,6 +2,7 @@ from ninja import NinjaAPI, Redoc
 
 from apps.authentication.api import authentication_router
 from apps.users.api import user_router
+from apps.accounts.api import account_router
 
 api = NinjaAPI(
     csrf=False,
@@ -13,3 +14,4 @@ api = NinjaAPI(
 
 api.add_router("/auth", authentication_router, tags=["Authentication"])
 api.add_router("/users", user_router, tags=["Users"])
+api.add_router("/accounts", account_router, tags=["Accounts"])
