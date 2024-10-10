@@ -11,7 +11,7 @@ transaction_router = Router(auth=JWTAuth())
 service = TransactionService()
 
 
-@transaction_router.get("/", response=TransactionListSchema)
+@transaction_router.get("", response=TransactionListSchema)
 def list_transactions(request):
     decode_jwt_token(request.headers.get("Authorization"))
     return service.list_transactions(**request.GET.dict())

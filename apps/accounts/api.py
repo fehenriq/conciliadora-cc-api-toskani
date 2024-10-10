@@ -20,31 +20,31 @@ account_router = Router(auth=JWTAuth())
 service = AccountService()
 
 
-@account_router.post("/", response=AccountSchema)
+@account_router.post("", response=AccountSchema)
 def create_account(request, payload: AccountInputSchema):
     decode_jwt_token(request.headers.get("Authorization"))
     return service.create_account(payload)
 
 
-@account_router.get("/", response=AccountListSchema)
+@account_router.get("", response=AccountListSchema)
 def list_accounts(request):
     decode_jwt_token(request.headers.get("Authorization"))
     return service.list_accounts(**request.GET.dict())
 
 
-@account_router.get("/{account_id}/", response=AccountSchema)
+@account_router.get("/{account_id}", response=AccountSchema)
 def get_account(request, account_id: uuid.UUID):
     decode_jwt_token(request.headers.get("Authorization"))
     return service.get_account(account_id)
 
 
-@account_router.patch("/{account_id}/", response=AccountSchema)
+@account_router.patch("/{account_id}", response=AccountSchema)
 def update_account(request, account_id: uuid.UUID, payload: AccountUpdateSchema):
     decode_jwt_token(request.headers.get("Authorization"))
     return service.update_account(account_id, payload)
 
 
-@account_router.post("/{account_id}/installments/", response=AccountSchema)
+@account_router.post("/{account_id}/installments", response=AccountSchema)
 def add_installments(
     request, account_id: uuid.UUID, installments: list[InstallmentInputSchema]
 ):
