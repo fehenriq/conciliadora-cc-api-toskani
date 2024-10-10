@@ -19,31 +19,31 @@ class AccountService:
     def get_all_omie_accounts(self):
         return OmieAccount.objects.all()
 
-    def get_account_by_id(self, account_id: uuid.UUID):
+    def get_account_by_id(self, account_id: uuid.UUID) -> Account:
         return Account.objects.filter(id=account_id).first()
 
-    def get_omie_account_by_id(self, omie_account_id: uuid.UUID):
+    def get_omie_account_by_id(self, omie_account_id: uuid.UUID) -> OmieAccount:
         return OmieAccount.objects.filter(id=omie_account_id).first()
 
     def get_installment_by_account_and_number(
         self, account: Account, installment_number: int
-    ):
+    ) -> Installment:
         return Installment.objects.filter(
             account=account, installment_number=installment_number
         ).first()
 
-    def list_accounts(self, **kwargs):
+    def list_accounts(self, **kwargs) -> dict:
         accounts = self.get_all_accounts()
         total = accounts.count()
         data = {"total": total, "accounts": accounts}
         return data
 
-    def get_account(self, account_id: uuid.UUID):
+    def get_account(self, account_id: uuid.UUID) -> Account:
         if not (account := self.get_account_by_id(account_id)):
             raise HttpError(HTTPStatus.NOT_FOUND, "Conta não encontrada")
         return account
 
-    def create_account(self, input_data: AccountInputSchema):
+    def create_account(self, input_data: AccountInputSchema) -> Account:
         if not (omie_account := self.get_omie_account_by_id(input_data.omie_account)):
             raise HttpError(HTTPStatus.NOT_FOUND, "Conta Omie não encontrada")
 
@@ -63,7 +63,9 @@ class AccountService:
 
         return account
 
-    def update_account(self, account_id: uuid.UUID, input_data: AccountUpdateSchema):
+    def update_account(
+        self, account_id: uuid.UUID, input_data: AccountUpdateSchema
+    ) -> Account:
         if not (account := self.get_account_by_id(account_id)):
             raise HttpError(HTTPStatus.NOT_FOUND, "Conta não encontrada")
 
@@ -81,7 +83,7 @@ class AccountService:
 
     def add_installments(
         self, account_id: uuid.UUID, installments: list[InstallmentInputSchema]
-    ):
+    ) -> Account:
         if not (account := self.get_account_by_id(account_id)):
             raise HttpError(HTTPStatus.NOT_FOUND, "Conta não encontrada")
 
@@ -99,7 +101,7 @@ class AccountService:
         account_id: uuid.UUID,
         installment_number: int,
         input_data: InstallmentUpdateSchema,
-    ):
+    ) -> Account:
         if not (account := self.get_account_by_id(account_id)):
             raise HttpError(HTTPStatus.NOT_FOUND, "Conta não encontrada")
 
@@ -119,7 +121,7 @@ class AccountService:
 
         return account
 
-    def list_omie_accounts(self, **kwargs):
+    def list_omie_accounts(self, **kwargs) -> dict:
         accounts = self.get_all_omie_accounts()
         total = accounts.count()
         data = {"total": total, "omie_accounts": accounts}
