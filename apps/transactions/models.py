@@ -7,10 +7,9 @@ from apps.accounts.models import Account
 
 class Transaction(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    cod_id_omie = models.IntegerField()
+    cod_id_omie = models.BigIntegerField()
     account = models.ForeignKey(Account, on_delete=models.CASCADE)
     tid = models.CharField(max_length=50)
-    invoice_number = models.CharField(max_length=50)
     expected_value = models.FloatField()
     fee = models.FloatField()
     balance = models.FloatField()

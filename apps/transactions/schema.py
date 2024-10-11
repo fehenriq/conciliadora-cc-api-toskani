@@ -12,7 +12,6 @@ class TransactionSchema(Schema):
     cod_id_omie: int
     account: AccountSchema
     tid: str
-    invoice_number: str
     expected_value: float
     fee: float
     balance: float
