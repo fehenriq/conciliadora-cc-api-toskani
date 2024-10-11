@@ -4,13 +4,13 @@ from typing import Optional
 
 from ninja import Schema
 
-from apps.accounts.schema import AccountSchema
+from apps.accounts.schema import AccountDashboardSchema
 
 
 class TransactionSchema(Schema):
     id: uuid.UUID
     cod_id_omie: int
-    account: AccountSchema
+    account: AccountDashboardSchema
     tid: str
     expected_value: float
     fee: float

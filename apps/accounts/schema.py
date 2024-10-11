@@ -24,10 +24,13 @@ class OmieAccountSchema(Schema):
     description: str
 
 
-class AccountSchema(Schema):
+class AccountDashboardSchema(Schema):
     id: uuid.UUID
     omie_account: OmieAccountSchema
     acquirer: str
+
+
+class AccountSchema(AccountDashboardSchema):
     settle: bool
     days_to_receive: int
     installments: list[InstallmentSchema]
@@ -42,7 +45,7 @@ class AccountUpdateSchema(Schema):
 
 class AccountListSchema(Schema):
     total: int
-    accounts: list[AccountSchema]
+    accounts: list[AccountDashboardSchema]
 
 
 class AccountInputSchema(Schema):
