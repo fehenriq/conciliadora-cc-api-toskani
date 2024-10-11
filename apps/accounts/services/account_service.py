@@ -32,7 +32,7 @@ class AccountService:
             account=account, installment_number=installment_number
         ).first()
 
-    def list_accounts(self, **kwargs) -> dict:
+    def list_accounts(self) -> dict:
         accounts = self.get_all_accounts()
         total = accounts.count()
         data = {"total": total, "accounts": accounts}
@@ -121,7 +121,7 @@ class AccountService:
 
         return account
 
-    def list_omie_accounts(self, **kwargs) -> dict:
+    def list_omie_accounts(self) -> dict:
         accounts = self.get_all_omie_accounts()
         total = accounts.count()
         data = {"total": total, "omie_accounts": accounts}

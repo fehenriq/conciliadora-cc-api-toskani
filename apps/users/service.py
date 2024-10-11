@@ -5,23 +5,11 @@ from http import HTTPStatus
 from django.http import JsonResponse
 from ninja.errors import HttpError
 
-from utils.validation import ValidationService
-
 from .models import CustomUser
 from .schema import ChangePasswordSchema, UserSchema
 
 
 class UserService:
-    @property
-    def validation_service(self):
-        return ValidationService()
-
-    @staticmethod
-    def build_user_response(user: CustomUser):
-        user_data = UserSchema(id=user.id, email=user.email, name=user.name)
-
-        return user_data
-
     @staticmethod
     def validate_password(password: str) -> bool:
         if len(password) < 8:
@@ -37,15 +25,13 @@ class UserService:
         return True
 
     def get_user_by_id(self, user_id: uuid.UUID) -> CustomUser:
-        return CustomUser.objects.get(pk=user_id)
+        return CustomUser.objects.get(id=user_id)
 
     def get_user(self, user_id: uuid.UUID) -> UserSchema:
         if not (user := self.get_user_by_id(user_id)):
             raise HttpError(HTTPStatus.NOT_FOUND, "Usuário não encontrado")
 
-        user_data = self.build_user_response(user=user)
-
-        return user_data
+        return user
 
     def change_user_password(
         self, user_id: uuid.UUID, payload: ChangePasswordSchema

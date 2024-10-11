@@ -29,7 +29,19 @@ def create_account(request, payload: AccountInputSchema):
 @account_router.get("", response=AccountListSchema)
 def list_accounts(request):
     decode_jwt_token(request.headers.get("Authorization"))
-    return service.list_accounts(**request.GET.dict())
+    return service.list_accounts()
+
+
+@account_router.post("/omie", response=str)
+def sync_omie(request):
+    decode_jwt_token(request.headers.get("Authorization"))
+    return get_omie_accounts()
+
+
+@account_router.get("/omie", response=OmieAccountListSchema)
+def list_omie_accounts(request):
+    decode_jwt_token(request.headers.get("Authorization"))
+    return service.list_omie_accounts()
 
 
 @account_router.get("/{account_id}", response=AccountSchema)
@@ -63,15 +75,3 @@ def update_installment(
 ):
     decode_jwt_token(request.headers.get("Authorization"))
     return service.update_installment(account_id, installment_number, payload)
-
-
-@account_router.get("/omie", response=OmieAccountListSchema)
-def list_omie_accounts(request):
-    decode_jwt_token(request.headers.get("Authorization"))
-    return service.list_omie_accounts(**request.GET.dict())
-
-
-@account_router.post("/omie", response=str)
-def sync_omie(request):
-    decode_jwt_token(request.headers.get("Authorization"))
-    return get_omie_accounts()
