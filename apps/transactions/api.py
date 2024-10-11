@@ -5,8 +5,9 @@ from ninja import Router
 from utils.jwt import JWTAuth, decode_jwt_token
 
 from .schema import TransactionListSchema
-from .services.transactions_service import TransactionService
 from .services.omie_service import create_transactions
+from .services.pagarme_service import consult_pagarme
+from .services.transactions_service import TransactionService
 
 transaction_router = Router(auth=JWTAuth())
 service = TransactionService()
@@ -22,3 +23,9 @@ def list_transactions(request):
 def sync_omie(request):
     decode_jwt_token(request.headers.get("Authorization"))
     return create_transactions()
+
+
+@transaction_router.patch("/pagarme", response=str)
+def sync_pagarme(request):
+    decode_jwt_token(request.headers.get("Authorization"))
+    return consult_pagarme()
