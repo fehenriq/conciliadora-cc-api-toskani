@@ -45,7 +45,7 @@ class AccountUpdateSchema(Schema):
 
 class AccountListSchema(Schema):
     total: int
-    accounts: list[AccountDashboardSchema]
+    accounts: list[AccountSchema]
 
 
 class AccountInputSchema(Schema):
