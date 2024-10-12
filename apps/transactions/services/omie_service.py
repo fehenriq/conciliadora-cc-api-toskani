@@ -4,15 +4,92 @@ from datetime import datetime
 
 import requests
 
-from apps.accounts.models import Account, OmieAccount, Installment
+from apps.accounts.models import Account, Installment, OmieAccount
 from apps.transactions.models import Transaction
 
 
-def create_transactions() -> str:
-    trasactions_ids = get_omie_transactions()
-    for transaction_id in trasactions_ids:
-        transaction_data = consult_omie_transaction(transaction_id)
+class OmieService:
+    def __init__(self):
+        self.omie_app_key = str(os.getenv("OMIE_APP_KEY"))
+        self.omie_app_secret = str(os.getenv("OMIE_APP_SECRET"))
+        self.base_url = "https://app.omie.com.br/api/v1/financas/contareceber/"
+        self.headers = {"Content-Type": "application/json"}
 
+    def create_transactions(self) -> str:
+        transaction_ids = self.get_omie_transactions()
+        for transaction_id in transaction_ids:
+            if transaction_data := self.consult_omie_transaction(transaction_id):
+                self._create_transaction_in_db(transaction_data)
+        return "Success"
+
+    def consult_omie_transaction(self, omie_id: int) -> dict:
+        payload = {
+            "call": "ConsultarContaReceber",
+            "param": [{"codigo_lancamento_omie": omie_id}],
+            "app_key": self.omie_app_key,
+            "app_secret": self.omie_app_secret,
+        }
+
+        response = self._send_request(payload)
+        if response and response.status_code == 200:
+            transaction = response.json()
+            return {
+                "cod_id_omie": omie_id,
+                "omie_account_id": transaction.get("id_conta_corrente", "NULO"),
+                "tid": transaction.get("nsu", "NULO"),
+                "expected_value": transaction.get("valor_documento", 0.0),
+                "fee": transaction.get("numero_parcela", "001/001"),
+                "balance": 0.0,
+                "expected_date": transaction.get("data_previsao", "NULO"),
+                "accounts_receivable_note": transaction.get("observacao", "NULO"),
+                "document_type": transaction.get("codigo_tipo_documento", "NULO"),
+            }
+        return {}
+
+    def get_omie_transactions(self) -> list:
+        ids = []
+        date = datetime.now().strftime("%d/%m/%Y")
+        page = 1
+
+        while True:
+            payload = {
+                "call": "ListarContasReceber",
+                "param": [
+                    {
+                        "pagina": page,
+                        "registros_por_pagina": 20,
+                        "apenas_importado_api": "N",
+                        "filtrar_por_data_de": date,
+                        "filtrar_por_data_ate": date,
+                    }
+                ],
+                "app_key": self.omie_app_key,
+                "app_secret": self.omie_app_secret,
+            }
+
+            response = self._send_request(payload)
+            if not response or response.status_code != 200:
+                break
+
+            data = response.json()
+            transactions = data.get("conta_receber_cadastro", [])
+            if not (transactions := data.get("conta_receber_cadastro", [])):
+                break
+
+            for transaction in transactions:
+                cod_id_omie = transaction.get("codigo_lancamento_omie")
+                document_type = transaction.get("codigo_tipo_documento", "")
+                if (
+                    document_type in ["PIX", "CRC", "CRD"]
+                    and not Transaction.objects.filter(cod_id_omie=cod_id_omie).exists()
+                ):
+                    ids.append(cod_id_omie)
+
+            page += 1
+
+        return ids
+
+    def _create_transaction_in_db(self, transaction_data: dict) -> None:
         account_omie = OmieAccount.objects.get(
             omie_id=transaction_data["omie_account_id"]
         )
@@ -48,89 +125,13 @@ def create_transactions() -> str:
             },
         )
 
-    return "Success"
-
-
-def consult_omie_transaction(omie_id: int) -> dict:
-    url = "https://app.omie.com.br/api/v1/financas/contareceber/"
-    omie_app_key = str(os.getenv("OMIE_APP_KEY"))
-    omie_app_secret = str(os.getenv("OMIE_APP_SECRET"))
-
-    payload = {
-        "call": "ConsultarContaReceber",
-        "param": [{"codigo_lancamento_omie": omie_id}],
-        "app_key": omie_app_key,
-        "app_secret": omie_app_secret,
-    }
-
-    headers = {"Content-Type": "application/json"}
-
-    response = requests.post(url, headers=headers, data=json.dumps(payload))
-
-    if response.status_code == 200:
-        transaction = response.json()
-
-        return {
-            "cod_id_omie": omie_id,
-            "omie_account_id": transaction.get("id_conta_corrente", "NULO"),
-            "tid": transaction.get("nsu", "NULO"),
-            "expected_value": transaction.get("valor_documento", 0.0),
-            "fee": transaction.get("numero_parcela", "001/001"),
-            "balance": 0.0,
-            "expected_date": transaction.get("data_previsao", "NULO"),
-            "accounts_receivable_note": transaction.get("observacao", "NULO"),
-            "document_type": transaction.get("codigo_tipo_documento", "NULO"),
-        }
-
-    return {}
-
-
-def get_omie_transactions() -> list:
-    url = "https://app.omie.com.br/api/v1/financas/contareceber/"
-    omie_app_key = str(os.getenv("OMIE_APP_KEY"))
-    omie_app_secret = str(os.getenv("OMIE_APP_SECRET"))
-    date = datetime.now().strftime("%d/%m/%Y")
-    ids = []
-
-    page = 1
-    while True:
-        payload = {
-            "call": "ListarContasReceber",
-            "param": [
-                {
-                    "pagina": page,
-                    "registros_por_pagina": 20,
-                    "apenas_importado_api": "N",
-                    "filtrar_por_data_de": date,
-                    "filtrar_por_data_ate": date,
-                }
-            ],
-            "app_key": omie_app_key,
-            "app_secret": omie_app_secret,
-        }
-
-        headers = {"Content-Type": "application/json"}
-
-        response = requests.post(url, headers=headers, data=json.dumps(payload))
-
-        if response.status_code != 200:
-            break
-
-        data = response.json()
-        transactions = data.get("conta_receber_cadastro", [])
-        if not transactions:
-            break
-
-        for transaction in transactions:
-            cod_id_omie = transaction.get("codigo_lancamento_omie")
-            document_type = transaction.get("codigo_tipo_documento", "")
-
-            if (
-                document_type in ["PIX", "CRC", "CRD"]
-                and not Transaction.objects.filter(cod_id_omie=cod_id_omie).exists()
-            ):
-                ids.append(cod_id_omie)
-
-        page += 1
-
-    return ids
+    def _send_request(self, payload: dict):
+        try:
+            response = requests.post(
+                self.base_url, headers=self.headers, data=json.dumps(payload)
+            )
+            response.raise_for_status()
+            return response
+        except requests.RequestException as e:
+            print(f"Request failed: {e}")
+            return None
