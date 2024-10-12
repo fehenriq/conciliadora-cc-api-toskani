@@ -1,5 +1,6 @@
 import base64
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
 
@@ -17,30 +18,37 @@ class PagarmeService:
 
     def consult_pagarme(self) -> str:
         transactions = Transaction.objects.all()
-        for transaction in transactions:
-            if pagarme_data := self.consult_pagarme_by_nsu(transaction.tid):
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            results = executor.map(self.consult_pagarme_by_nsu, transactions)
+
+        updates = []
+        for transaction, pagarme_data in zip(transactions, results):
+            if pagarme_data:
                 transaction.received_value = pagarme_data.get("received_value")
                 transaction.value_difference = (
                     transaction.expected_value - pagarme_data.get("received_value", 0)
                 )
                 transaction.status = pagarme_data.get("status")
                 transaction.alert = pagarme_data.get("alert")
-                transaction.save()
+                updates.append(transaction)
+
+        Transaction.objects.bulk_update(
+            updates, ["received_value", "value_difference", "status", "alert"]
+        )
 
         return "Success"
 
-    def consult_pagarme_by_nsu(self, tid: str) -> dict:
-        url = f"{self.base_url}?tid={tid}"
+    def consult_pagarme_by_nsu(self, transaction: Transaction) -> dict:
+        url = f"{self.base_url}?tid={transaction.tid}"
         response = self._send_request(url)
 
-        if response_data := response.json():
+        if response and response.json():
+            response_data = response.json()[0]
             return {
-                "received_value": response_data[0].get("paid_amount", 0.0),
-                "value_difference": 0.0,
-                "status": response_data[0].get("acquirer_response_message", ""),
-                "alert": response_data[0].get("date_updated", ""),
+                "received_value": response_data.get("paid_amount", 0.0),
+                "status": response_data.get("acquirer_response_message", ""),
+                "alert": response_data.get("date_updated", ""),
             }
-
         return {}
 
     def _encode_token(self) -> str:
@@ -48,7 +56,7 @@ class PagarmeService:
 
     def _send_request(self, url: str):
         try:
-            response = requests.get(url, headers=self.headers)
+            response = requests.get(url, headers=self.headers, timeout=(5, 15))
             response.raise_for_status()
             return response
         except requests.RequestException as e:

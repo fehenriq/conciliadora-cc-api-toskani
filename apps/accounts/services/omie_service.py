@@ -36,7 +36,10 @@ class OmieService:
     def _send_request(self, payload: dict):
         try:
             response = requests.post(
-                self.url, headers=self.headers, data=json.dumps(payload)
+                self.url,
+                headers=self.headers,
+                data=json.dumps(payload),
+                timeout=(5, 15),
             )
             response.raise_for_status()
             return response

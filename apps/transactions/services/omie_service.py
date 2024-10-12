@@ -1,5 +1,6 @@
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 import requests
@@ -17,9 +18,11 @@ class OmieService:
 
     def create_transactions(self) -> str:
         transaction_ids = self.get_omie_transactions()
-        for transaction_id in transaction_ids:
-            if transaction_data := self.consult_omie_transaction(transaction_id):
-                self._create_transaction_in_db(transaction_data)
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            results = executor.map(self.consult_omie_transaction, transaction_ids)
+
+        transactions_data = [result for result in results if result]
+        self._bulk_create_transactions(transactions_data)
         return "Success"
 
     def consult_omie_transaction(self, omie_id: int) -> dict:
@@ -50,6 +53,7 @@ class OmieService:
         ids = []
         date = datetime.now().strftime("%d/%m/%Y")
         page = 1
+        existing_ids = set(Transaction.objects.values_list("cod_id_omie", flat=True))
 
         while True:
             payload = {
@@ -72,7 +76,6 @@ class OmieService:
                 break
 
             data = response.json()
-            transactions = data.get("conta_receber_cadastro", [])
             if not (transactions := data.get("conta_receber_cadastro", [])):
                 break
 
@@ -81,54 +84,53 @@ class OmieService:
                 document_type = transaction.get("codigo_tipo_documento", "")
                 if (
                     document_type in ["PIX", "CRC", "CRD"]
-                    and not Transaction.objects.filter(cod_id_omie=cod_id_omie).exists()
+                    and cod_id_omie not in existing_ids
                 ):
                     ids.append(cod_id_omie)
+                    existing_ids.add(cod_id_omie)
 
             page += 1
 
         return ids
 
-    def _create_transaction_in_db(self, transaction_data: dict) -> None:
-        account_omie = OmieAccount.objects.get(
-            omie_id=transaction_data["omie_account_id"]
-        )
-        account = Account.objects.get(omie_account=account_omie)
+    def _bulk_create_transactions(self, transactions_data: list) -> None:
+        transactions_to_create = []
+        for data in transactions_data:
+            account_omie = OmieAccount.objects.get(omie_id=data["omie_account_id"])
+            account = Account.objects.get(omie_account=account_omie)
 
-        date_obj = datetime.strptime(
-            transaction_data["expected_date"], "%d/%m/%Y"
-        ).date()
+            date_obj = datetime.strptime(data["expected_date"], "%d/%m/%Y").date()
+            fee_number = int(data["fee"].split("/")[0])
+            installment = Installment.objects.get(
+                account=account, installment_number=fee_number
+            )
+            fee_percent = installment.fee
+            new_fee = data["expected_value"] * (fee_percent / 100)
+            new_balance = data["expected_value"] - new_fee
 
-        fee_number = int(transaction_data["fee"].split("/")[0])
-        installment = Installment.objects.get(
-            account=account, installment_number=fee_number
-        )
-        fee_percent = installment.fee
-        new_fee = transaction_data["expected_value"] * (fee_percent / 100)
-        new_balance = transaction_data["expected_value"] - new_fee
+            doc_type = {"PIX": "PIX", "CRC": "CREDIT", "CRD": "DEBIT"}
+            transaction = Transaction(
+                cod_id_omie=data["cod_id_omie"],
+                account=account,
+                tid=data["tid"],
+                expected_value=data["expected_value"],
+                fee=new_fee,
+                balance=new_balance,
+                expected_date=date_obj,
+                accounts_receivable_note=data["accounts_receivable_note"],
+                document_type=doc_type[data["document_type"]],
+            )
+            transactions_to_create.append(transaction)
 
-        doc_type = {"PIX": "PIX", "CRC": "CREDIT", "CRD": "DEBIT"}
-
-        Transaction.objects.get_or_create(
-            cod_id_omie=transaction_data["cod_id_omie"],
-            defaults={
-                "account": account,
-                "tid": transaction_data["tid"],
-                "expected_value": transaction_data["expected_value"],
-                "fee": new_fee,
-                "balance": new_balance,
-                "expected_date": date_obj,
-                "accounts_receivable_note": transaction_data[
-                    "accounts_receivable_note"
-                ],
-                "document_type": doc_type[transaction_data["document_type"]],
-            },
-        )
+        Transaction.objects.bulk_create(transactions_to_create)
 
     def _send_request(self, payload: dict):
         try:
             response = requests.post(
-                self.base_url, headers=self.headers, data=json.dumps(payload)
+                self.base_url,
+                headers=self.headers,
+                data=json.dumps(payload),
+                timeout=(5, 15),
             )
             response.raise_for_status()
             return response
