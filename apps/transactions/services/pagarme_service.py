@@ -62,15 +62,3 @@ class PagarmeService:
         except requests.RequestException as e:
             print(f"Request failed: {e}")
             return None
-
-    def _encode_token(self) -> str:
-        return base64.b64encode(f"{self.access_token}:".encode()).decode()
-
-    def _send_request(self, url: str):
-        try:
-            response = requests.get(url, headers=self.headers, timeout=(5, 15))
-            response.raise_for_status()
-            return response
-        except requests.RequestException as e:
-            print(f"Request failed: {e}")
-            return None
