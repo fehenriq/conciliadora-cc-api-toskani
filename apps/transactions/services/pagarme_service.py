@@ -21,7 +21,7 @@ def consult_pagarme():
 
 
 def consult_pagarme_by_nsu(tid):
-    url = f"https://api.pagar.me/1/transactions?tid={tid}"
+    url = "https://api.pagar.me/1/transactions"
     acess_token = str(os.getenv("PAGARME_ACCESS_KEY"))
 
     base64_token = base64.b64encode(f"{acess_token}:".encode()).decode()
@@ -31,14 +31,16 @@ def consult_pagarme_by_nsu(tid):
         "Content-Type": "application/json",
     }
 
-    response = requests.get(url, headers=headers)
+    params = {"tid": tid}
+
+    response = requests.get(url, headers=headers, params=params)
 
     if response_data := response.json():
         return {
-            "received_value": response_data[0].paid_amount,
+            "received_value": response_data[0].get("paid_amount"),
             "value_difference": 0.0,
-            "status": response_data[0].acquirer_response_message,
-            "alert": response_data[0].date_updated,
+            "status": response_data[0].get("acquirer_response_message"),
+            "alert": response_data[0].get("date_updated"),
         }
 
     return {}
