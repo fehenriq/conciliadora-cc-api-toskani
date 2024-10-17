@@ -26,28 +26,29 @@ class PagarmeService:
             if pagarme_data:
                 transaction.received_value = pagarme_data.get("received_value")
                 transaction.value_difference = (
-                    transaction.expected_value - pagarme_data.get("received_value", 0)
+                    transaction.expected_value - pagarme_data.get("received_value")
                 )
                 transaction.status = pagarme_data.get("status")
-                transaction.alert = pagarme_data.get("alert")
                 updates.append(transaction)
 
         Transaction.objects.bulk_update(
-            updates, ["received_value", "value_difference", "status", "alert"]
+            updates, ["received_value", "value_difference", "status"]
         )
 
         return "Success"
 
     def consult_pagarme_by_nsu(self, transaction: Transaction) -> dict:
-        url = f"{self.base_url}?tid={transaction.tid}"
+        url = f"{self.base_url}/{transaction.tid}"
         response = self._send_request(url)
 
         if response and response.json():
-            response_data = response.json()[0]
+            response_data = response.json()
+            received_value_real = (
+                response_data.get("paid_amount") / 100
+            ) / response_data.get("installments")
             return {
-                "received_value": response_data.get("paid_amount", 0.0),
+                "received_value": received_value_real,
                 "status": response_data.get("acquirer_response_message", ""),
-                "alert": response_data.get("date_updated", ""),
             }
         return {}
 
