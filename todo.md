@@ -7,16 +7,22 @@
 - Conta: Remover campo adquirente
     - Back: ✅
     - Front: ❓
+- Transação: Remover campo alert
+    - Back: ✅
+    - Front: ❓
+- Transação: Adicionar campo installment
+    - Back: ✅
+    - Front: ❓
 - Adicionar delete de conta e parcelas
     - Back: ✅
     - Front: ❓
 - Desenvolver formatação condicional
     - Front: ❓
+- Arrumar filtro do pagarme
+    - Back: ✅
 - Requisição de dar baixa na Conta a receber
     - Back: ❌
 - Requisição de lançamento de taxa
     - Back: ❌
 - Requisição de transferência entre CC
-    - Back: ❌
-- Arrumar filtro do pagarme
     - Back: ❌
