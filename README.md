@@ -1,6 +1,6 @@
-# API
+# Conciliadora CC API
 
-A API foi desenhada para gerir usuários, imagens e apps do Grupo Gimi.
+A Conciliadora CC API foi desenhada para gerir usuários, imagens e apps do Grupo Gimi.
 
 ## ✔️ Tecnologias usadas
 - Python
@@ -10,10 +10,12 @@ A API foi desenhada para gerir usuários, imagens e apps do Grupo Gimi.
 - PostgreSQL
 - Python Jose
 - Vercel
+- Omie API
+- Pagar.Me API
 
 ## 📁 Acesso ao deploy
 
-[![Deploy with Vercel](https://vercel.com/button)](https://engenhadev.com.br/)
+[![Deploy with Vercel](https://vercel.com/button)](https://conciliadora-cc-api.vercel.app/api/docs)
 
 ## 🔨 Funcionalidades
 
@@ -22,7 +24,7 @@ A API foi desenhada para gerir usuários, imagens e apps do Grupo Gimi.
 
 ## 📌 Uso
 
-A API segue os princípios REST para comunicação. Os seguintes endpoints estão disponíveis:
+A Conciliadora CC API segue os princípios REST para comunicação. Os seguintes endpoints estão disponíveis:
 
 ### /users
 - Gerenciar usuários e realizar operações CRUD.
