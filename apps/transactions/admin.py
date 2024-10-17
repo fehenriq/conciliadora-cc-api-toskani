@@ -17,5 +17,5 @@ class TransactionAdmin(admin.ModelAdmin):
         "expected_date",
     )
     list_filter = ("document_type", "status", "expected_date")
-    search_fields = ("cod_id_omie", "tid", "account__omie_account__account_number")
+    search_fields = ("cod_id_omie", "tid")
     readonly_fields = ("value_difference", "alert")

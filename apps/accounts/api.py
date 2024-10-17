@@ -1,5 +1,6 @@
 import uuid
 
+from django.http import JsonResponse
 from ninja import Router
 
 from utils.jwt import JWTAuth, decode_jwt_token
@@ -45,16 +46,16 @@ def list_omie_accounts(request):
     return account_service.list_omie_accounts()
 
 
-@account_router.get("/{account_id}", response=AccountSchema)
-def get_account(request, account_id: uuid.UUID):
-    decode_jwt_token(request.headers.get("Authorization"))
-    return account_service.get_account(account_id)
-
-
 @account_router.patch("/{account_id}", response=AccountSchema)
 def update_account(request, account_id: uuid.UUID, payload: AccountUpdateSchema):
     decode_jwt_token(request.headers.get("Authorization"))
     return account_service.update_account(account_id, payload)
+
+
+@account_router.delete("/{account_id}", response=dict)
+def delete_account(request, account_id: uuid.UUID):
+    decode_jwt_token(request.headers.get("Authorization"))
+    return account_service.delete_account(account_id)
 
 
 @account_router.post("/{account_id}/installments", response=AccountSchema)
@@ -76,3 +77,9 @@ def update_installment(
 ):
     decode_jwt_token(request.headers.get("Authorization"))
     return account_service.update_installment(account_id, installment_number, payload)
+
+
+@account_router.delete("/{account_id}/installments/{installment_number}", response=dict)
+def delete_installment(request, account_id: uuid.UUID, installment_number: int):
+    decode_jwt_token(request.headers.get("Authorization"))
+    return account_service.delete_installment(account_id, installment_number)

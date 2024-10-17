@@ -17,7 +17,7 @@ class PagarmeService:
         }
 
     def consult_pagarme(self) -> str:
-        transactions = Transaction.objects.all()
+        transactions = Transaction.objects.filter(received_value__isnull=True)
         with ThreadPoolExecutor(max_workers=10) as executor:
             results = executor.map(self.consult_pagarme_by_nsu, transactions)
 

@@ -20,14 +20,13 @@ class InstallmentUpdateSchema(Schema):
 class OmieAccountSchema(Schema):
     id: uuid.UUID
     omie_id: int
-    account_number: str
     description: str
 
 
 class AccountDashboardSchema(Schema):
     id: uuid.UUID
-    omie_account: OmieAccountSchema
-    acquirer: str
+    omie_account_origin: OmieAccountSchema
+    omie_account_destiny: Optional[OmieAccountSchema] = None
 
 
 class AccountSchema(AccountDashboardSchema):
@@ -37,8 +36,8 @@ class AccountSchema(AccountDashboardSchema):
 
 
 class AccountUpdateSchema(Schema):
-    omie_account: Optional[uuid.UUID] = None
-    acquirer: Optional[str] = None
+    omie_account_origin: Optional[uuid.UUID] = None
+    omie_account_destiny: Optional[uuid.UUID] = None
     settle: Optional[bool] = None
     days_to_receive: Optional[int] = None
 
@@ -49,8 +48,8 @@ class AccountListSchema(Schema):
 
 
 class AccountInputSchema(Schema):
-    omie_account: uuid.UUID
-    acquirer: str
+    omie_account_origin: uuid.UUID
+    omie_account_destiny: uuid.UUID
     settle: bool
     days_to_receive: int
     installments: list[InstallmentInputSchema]

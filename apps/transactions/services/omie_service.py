@@ -97,7 +97,7 @@ class OmieService:
         transactions_to_create = []
         for data in transactions_data:
             account_omie = OmieAccount.objects.get(omie_id=data["omie_account_id"])
-            account = Account.objects.get(omie_account=account_omie)
+            account = Account.objects.get(omie_account_origin=account_omie)
 
             date_obj = datetime.strptime(data["expected_date"], "%d/%m/%Y").date()
             fee_number = int(data["fee"].split("/")[0])

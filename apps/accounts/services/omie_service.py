@@ -50,13 +50,11 @@ class OmieService:
     def _process_accounts(self, data: dict) -> None:
         for conta in data.get("ListarContasCorrentes", []):
             nCodCC = conta.get("nCodCC")
-            numero_conta_corrente = conta.get("numero_conta_corrente", "Sem Número CC")
             descricao = conta.get("descricao", "Sem Descrição")
 
             OmieAccount.objects.get_or_create(
                 omie_id=nCodCC,
                 defaults={
-                    "account_number": numero_conta_corrente,
                     "description": descricao,
                 },
             )
