@@ -15,6 +15,7 @@ class PagarmeService:
             "Authorization": f"Basic {self._encode_token()}",
             "Content-Type": "application/json",
         }
+        self.cache = {}
 
     def consult_pagarme(self) -> str:
         transactions = Transaction.objects.filter(received_value__isnull=True)
@@ -24,9 +25,10 @@ class PagarmeService:
         updates = []
         for transaction, pagarme_data in zip(transactions, results):
             if pagarme_data:
-                transaction.received_value = pagarme_data.get("received_value")
+                formatted_value = round(pagarme_data.get("received_value"), 2)
+                transaction.received_value = formatted_value
                 transaction.value_difference = (
-                    transaction.expected_value - pagarme_data.get("received_value")
+                    transaction.expected_value - formatted_value
                 )
                 transaction.status = pagarme_data.get("status")
                 updates.append(transaction)
@@ -38,6 +40,9 @@ class PagarmeService:
         return "Success"
 
     def consult_pagarme_by_nsu(self, transaction: Transaction) -> dict:
+        if transaction.tid in self.cache:
+            return self.cache[transaction.tid]
+
         url = f"{self.base_url}/{transaction.tid}"
         response = self._send_request(url)
 
@@ -46,10 +51,13 @@ class PagarmeService:
             received_value_real = (
                 response_data.get("paid_amount") / 100
             ) / response_data.get("installments")
-            return {
+            pagarme_data = {
                 "received_value": received_value_real,
                 "status": response_data.get("acquirer_response_message", ""),
             }
+            self.cache[transaction.tid] = pagarme_data
+            return pagarme_data
+
         return {}
 
     def _encode_token(self) -> str:
