@@ -1,5 +1,3 @@
-import uuid
-
 from ninja import Router
 
 from utils.jwt import JWTAuth, decode_jwt_token
