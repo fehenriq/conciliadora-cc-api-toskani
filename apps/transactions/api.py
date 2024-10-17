@@ -19,6 +19,12 @@ def list_transactions(request):
     return transaction_service.list_transactions(**request.GET.dict())
 
 
+@transaction_router.patch("/verify-dates", response=str)
+def check_late_bills(request):
+    decode_jwt_token(request.headers.get("Authorization"))
+    return transaction_service.check_late_bills()
+
+
 @transaction_router.post("/omie", response=str)
 def sync_omie(request):
     decode_jwt_token(request.headers.get("Authorization"))

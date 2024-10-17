@@ -14,3 +14,13 @@ class TransactionService:
         total = transactions.count()
         data = {"total": total, "transactions": transactions}
         return data
+
+    def check_late_bills(self) -> str:
+        transactions = Transaction.objects.filter(
+            received_value__isnull=True, expected_date__lt=timezone.now().date()
+        )
+
+        if transactions:
+            transactions.update(status="Pagamento em atraso")
+
+        return "Success"
