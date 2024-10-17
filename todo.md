@@ -1,0 +1,22 @@
+- Conta Omie: Remover campo número da conta, vamos identificar só pela descrição
+    - Back: ✅
+    - Front: ❓
+- Conta: Adicionar campo conta destino (campo opcional)
+    - Back: ✅
+    - Front: ❓
+- Conta: Remover campo adquirente
+    - Back: ✅
+    - Front: ❓
+- Adicionar delete de conta e parcelas
+    - Back: ✅
+    - Front: ❓
+- Desenvolver formatação condicional
+    - Front: ❓
+- Requisição de dar baixa na Conta a receber
+    - Back: ❌
+- Requisição de lançamento de taxa
+    - Back: ❌
+- Requisição de transferência entre CC
+    - Back: ❌
+- Arrumar filtro do pagarme
+    - Back: ❌
