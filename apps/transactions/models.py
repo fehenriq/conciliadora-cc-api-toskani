@@ -19,11 +19,11 @@ class Transaction(models.Model):
         max_length=50,
         choices=[("DEBIT", "Debit"), ("CREDIT", "Credit"), ("PIX", "Pix")],
     )
+    installment = models.CharField(max_length=255, blank=True, null=True)
 
     received_value = models.FloatField(blank=True, null=True)
     value_difference = models.FloatField(blank=True, null=True)
     status = models.CharField(max_length=50, blank=True, null=True)
-    alert = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return str(self.cod_id_omie)

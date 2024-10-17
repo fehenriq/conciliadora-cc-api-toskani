@@ -21,7 +21,7 @@ class TransactionSchema(Schema):
     received_value: Optional[float]
     value_difference: Optional[float]
     status: Optional[str]
-    alert: Optional[str]
+    installment: Optional[str]
 
 
 class TransactionListSchema(Schema):

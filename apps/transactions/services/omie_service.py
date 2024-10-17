@@ -18,7 +18,7 @@ class OmieService:
 
     def create_transactions(self) -> str:
         transaction_ids = self.get_omie_transactions()
-        with ThreadPoolExecutor(max_workers=10) as executor:
+        with ThreadPoolExecutor(max_workers=5) as executor:
             results = executor.map(self.consult_omie_transaction, transaction_ids)
 
         transactions_data = [result for result in results if result]
@@ -119,6 +119,7 @@ class OmieService:
                 expected_date=date_obj,
                 accounts_receivable_note=data["accounts_receivable_note"],
                 document_type=doc_type[data["document_type"]],
+                installment=data["fee"],
             )
             transactions_to_create.append(transaction)
 

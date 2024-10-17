@@ -10,6 +10,7 @@ class TransactionAdmin(admin.ModelAdmin):
         "account",
         "document_type",
         "tid",
+        "installment",
         "expected_value",
         "received_value",
         "value_difference",
@@ -18,4 +19,4 @@ class TransactionAdmin(admin.ModelAdmin):
     )
     list_filter = ("document_type", "status", "expected_date")
     search_fields = ("cod_id_omie", "tid")
-    readonly_fields = ("value_difference", "alert")
+    readonly_fields = ("value_difference", "received_value")
