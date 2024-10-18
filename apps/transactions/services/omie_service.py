@@ -1,7 +1,7 @@
 import json
 import os
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import requests
 
@@ -18,7 +18,7 @@ class OmieService:
 
     def create_transactions(self) -> str:
         transaction_ids = self.get_omie_transactions()
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=3) as executor:
             results = executor.map(self.consult_omie_transaction, transaction_ids)
 
         transactions_data = [result for result in results if result]
@@ -99,21 +99,25 @@ class OmieService:
             account_omie = OmieAccount.objects.get(omie_id=data["omie_account_id"])
             account = Account.objects.get(omie_account_origin=account_omie)
 
+            days_plus = account.days_to_receive
             date_obj = datetime.strptime(data["expected_date"], "%d/%m/%Y").date()
-            fee_number = int(data["fee"].split("/")[0])
+            date_obj += timedelta(days=days_plus)
+
+            fee_number = int(data["fee"].split("/")[1])
             installment = Installment.objects.get(
                 account=account, installment_number=fee_number
             )
             fee_percent = installment.fee
-            new_fee = data["expected_value"] * (fee_percent / 100)
-            new_balance = data["expected_value"] - new_fee
+            formatted_value = round(data["expected_value"], 2)
+            new_fee = round(formatted_value * (fee_percent / 100), 2)
+            new_balance = round(formatted_value - new_fee, 2)
 
             doc_type = {"PIX": "PIX", "CRC": "CREDIT", "CRD": "DEBIT"}
             transaction = Transaction(
                 cod_id_omie=data["cod_id_omie"],
                 account=account,
                 tid=data["tid"],
-                expected_value=data["expected_value"],
+                expected_value=formatted_value,
                 fee=new_fee,
                 balance=new_balance,
                 expected_date=date_obj,
