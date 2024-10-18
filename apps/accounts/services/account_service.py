@@ -146,9 +146,14 @@ class AccountService:
         ):
             raise HttpError(HTTPStatus.NOT_FOUND, "Parcela não encontrada")
 
-        installment.delete()
+        for attr, value in input_data.model_dump(
+            exclude_defaults=True, exclude_unset=True
+        ).items():
+            setattr(installment, attr, value)
 
-        return JsonResponse({"message": "Parcela deletada com sucesso"})
+        installment.save()
+
+        return account
 
     def delete_installment(
         self, account_id: uuid.UUID, installment_number: int
@@ -163,9 +168,9 @@ class AccountService:
         ):
             raise HttpError(HTTPStatus.NOT_FOUND, "Parcela não encontrada")
 
-        installment.save()
+        installment.delete()
 
-        return account
+        return JsonResponse({"message": "Parcela deletada com sucesso"})
 
     def list_omie_accounts(self) -> dict:
         accounts = self.get_all_omie_accounts()
