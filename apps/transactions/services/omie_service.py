@@ -225,6 +225,11 @@ class OmieService:
 
         Transaction.objects.bulk_create(transactions_to_create)
 
+        # TODO: Change when ready
+        # for transaction in transactions_to_create:
+        #     if not transaction.account.settle:
+        #         self.release_omie_receipt(transaction)
+
     def _send_request(self, payload: dict, endpoint: str):
         try:
             response = requests.post(
