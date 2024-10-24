@@ -26,11 +26,14 @@ class PagarmeService:
         for transaction, pagarme_data in zip(transactions, results):
             if pagarme_data:
                 formatted_value = round(pagarme_data.get("received_value"), 2)
+                value_diff = transaction.expected_value - formatted_value
                 transaction.received_value = formatted_value
-                transaction.value_difference = (
-                    transaction.expected_value - formatted_value
+                transaction.value_difference = value_diff
+                transaction.status = (
+                    "Pagamento recebido com sucesso"
+                    if value_diff <= 0
+                    else "Pagamento recebido parcialmente"
                 )
-                transaction.status = pagarme_data.get("status")
                 updates.append(transaction)
 
         Transaction.objects.bulk_update(
@@ -40,23 +43,37 @@ class PagarmeService:
         return "Success"
 
     def consult_pagarme_by_nsu(self, transaction: Transaction) -> dict:
-        if transaction.tid in self.cache:
-            return self.cache[transaction.tid]
+        response_data = None
+        if transaction.tid not in self.cache:
+            url = f"{self.base_url}/{transaction.tid}/payables"
+            response = self._send_request(url)
+            if response and response.json():
+                response_data = response.json()
+        else:
+            response_data = self.cache[transaction.tid]
 
-        url = f"{self.base_url}/{transaction.tid}"
-        response = self._send_request(url)
+        if response_data:
+            self.cache[transaction.tid] = response_data
 
-        if response and response.json():
-            response_data = response.json()
-            received_value_real = (
-                response_data.get("paid_amount") / 100
-            ) / response_data.get("installments")
-            pagarme_data = {
-                "received_value": received_value_real,
-                "status": response_data.get("acquirer_response_message", ""),
-            }
-            self.cache[transaction.tid] = pagarme_data
-            return pagarme_data
+            installment_number = int(transaction.installment.split("/")[0])
+
+            installment_data = next(
+                (
+                    payable
+                    for payable in response_data
+                    if payable.get("installment") == installment_number
+                    and payable.get("status") == "paid"
+                    and payable.get("amount") > 0
+                ),
+                None,
+            )
+
+            if installment_data:
+                received_value_real = installment_data.get("amount") / 100
+                pagarme_data = {
+                    "received_value": received_value_real,
+                }
+                return pagarme_data
 
         return {}
 
