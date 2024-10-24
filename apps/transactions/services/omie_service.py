@@ -46,6 +46,7 @@ class OmieService:
                 "expected_date": transaction.get("data_previsao", "NULO"),
                 "accounts_receivable_note": transaction.get("observacao", "NULO"),
                 "document_type": transaction.get("codigo_tipo_documento", "NULO"),
+                "status": "Aguardando pagamento",
             }
         return {}
 
@@ -124,6 +125,7 @@ class OmieService:
                 accounts_receivable_note=data["accounts_receivable_note"],
                 document_type=doc_type[data["document_type"]],
                 installment=data["fee"],
+                status=data["status"],
             )
             transactions_to_create.append(transaction)
 
