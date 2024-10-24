@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 
 from apps.transactions.models import Transaction
+from apps.transactions.services.omie_service import OmieService
 
 
 class PagarmeService:
@@ -16,6 +17,7 @@ class PagarmeService:
             "Content-Type": "application/json",
         }
         self.cache = {}
+        self.omie_service = OmieService()
 
     def consult_pagarme(self) -> str:
         transactions = Transaction.objects.filter(received_value__isnull=True)
@@ -40,7 +42,20 @@ class PagarmeService:
             updates, ["received_value", "value_difference", "status"]
         )
 
+        # TODO: Change when ready
+        # with ThreadPoolExecutor(max_workers=10) as executor:
+        #     executor.map(self.process_transaction_updates, updates)
+
         return "Success"
+
+    def process_transaction_updates(self, transaction: Transaction):
+        if transaction.account.settle:
+            self.omie_service.release_omie_receipt(transaction)
+
+        self.omie_service.launch_omie_fee(transaction)
+
+        if transaction.account.omie_account_destiny:
+            self.omie_service.transfer_omie_value(transaction)
 
     def consult_pagarme_by_nsu(self, transaction: Transaction) -> dict:
         response_data = None

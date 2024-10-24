@@ -13,7 +13,7 @@ class OmieService:
     def __init__(self):
         self.omie_app_key = str(os.getenv("OMIE_APP_KEY"))
         self.omie_app_secret = str(os.getenv("OMIE_APP_SECRET"))
-        self.base_url = "https://app.omie.com.br/api/v1/financas/contareceber/"
+        self.base_url = "https://app.omie.com.br/api/v1/financas/"
         self.headers = {"Content-Type": "application/json"}
 
     def create_transactions(self) -> str:
@@ -33,7 +33,7 @@ class OmieService:
             "app_secret": self.omie_app_secret,
         }
 
-        response = self._send_request(payload)
+        response = self._send_request(payload, "contareceber")
         if response and response.status_code == 200:
             transaction = response.json()
             return {
@@ -49,6 +49,102 @@ class OmieService:
                 "status": "Aguardando pagamento",
             }
         return {}
+
+    def release_omie_receipt(self, transaction: Transaction) -> str:
+        date = datetime.now().strftime("%d/%m/%Y")
+        value = (
+            transaction.received_value
+            if transaction.received_value
+            else transaction.expected_value
+        )
+        payload = {
+            "call": "LancarRecebimento",
+            "param": [
+                {
+                    "codigo_lancamento": 0,
+                    "codigo_baixa": 0,
+                    "codigo_conta_corrente": transaction.account.omie_account_origin.omie_id,
+                    "valor": value,
+                    "data": date,
+                    "observacao": "Baixa via sistema Conciliadora CC",
+                }
+            ],
+            "app_key": self.omie_app_key,
+            "app_secret": self.omie_app_secret,
+        }
+
+        response = self._send_request(payload, "contareceber")
+        if response and response.status_code == 200:
+            return "Success"
+
+        return "Failed"
+
+    def launch_omie_fee(self, transaction: Transaction) -> str:
+        date = datetime.now().strftime("%d/%m/%Y")
+        doc_type = (
+            "CRT" if transaction.document_type in ["CREDIT", "DEBIT"] else "99999"
+        )
+        payload = {
+            "call": "IncluirLancCC",
+            "param": [
+                {
+                    "cCodIntLanc": transaction.cod_id_omie,
+                    "cabecalho": {
+                        "nCodCC": transaction.account.omie_account_origin.omie_id,
+                        "dDtLanc": date,
+                        "nValorLanc": transaction.fee,
+                    },
+                    "detalhes": {
+                        "cCodCateg": "2.05.04",
+                        "cTipo": doc_type,
+                        "cObs": "Lançamento via sistema Conciliadora CC",
+                    },
+                }
+            ],
+            "app_key": self.omie_app_key,
+            "app_secret": self.omie_app_secret,
+        }
+
+        response = self._send_request(payload, "contacorrentelancamentos")
+        if response and response.status_code == 200:
+            return "Success"
+
+        return "Failed"
+
+    def transfer_omie_value(self, transaction: Transaction) -> str:
+        date = datetime.now().strftime("%d/%m/%Y")
+        doc_type = (
+            "CRT" if transaction.document_type in ["CREDIT", "DEBIT"] else "99999"
+        )
+        payload = {
+            "call": "IncluirLancCC",
+            "param": [
+                {
+                    "cCodIntLanc": transaction.cod_id_omie,
+                    "cabecalho": {
+                        "nCodCC": transaction.account.omie_account_origin.omie_id,
+                        "dDtLanc": date,
+                        "nValorLanc": transaction.balance,
+                    },
+                    "detalhes": {
+                        "cCodCateg": "2.05.04",
+                        "cTipo": doc_type,
+                        "cObs": "Lançamento via sistema Conciliadora CC",
+                    },
+                    "transferencia": {
+                        "nCodCCDestino": transaction.account.omie_account_destiny.omie_id
+                    },
+                }
+            ],
+            "app_key": self.omie_app_key,
+            "app_secret": self.omie_app_secret,
+        }
+
+        response = self._send_request(payload, "contacorrentelancamentos")
+        if response and response.status_code == 200:
+            return "Success"
+
+        return "Failed"
 
     def get_omie_transactions(self) -> list:
         ids = []
@@ -72,7 +168,7 @@ class OmieService:
                 "app_secret": self.omie_app_secret,
             }
 
-            response = self._send_request(payload)
+            response = self._send_request(payload, "contareceber")
             if not response or response.status_code != 200:
                 break
 
@@ -131,10 +227,15 @@ class OmieService:
 
         Transaction.objects.bulk_create(transactions_to_create)
 
-    def _send_request(self, payload: dict):
+        # TODO: Change when ready
+        # for transaction in transactions_to_create:
+        #     if not transaction.account.settle:
+        #         self.release_omie_receipt(transaction)
+
+    def _send_request(self, payload: dict, endpoint: str):
         try:
             response = requests.post(
-                self.base_url,
+                f"{self.base_url}/{endpoint}/",
                 headers=self.headers,
                 data=json.dumps(payload),
                 timeout=(5, 15),
