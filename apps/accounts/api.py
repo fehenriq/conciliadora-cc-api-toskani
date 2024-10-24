@@ -1,6 +1,5 @@
 import uuid
 
-from django.http import JsonResponse
 from ninja import Router
 
 from utils.jwt import JWTAuth, decode_jwt_token

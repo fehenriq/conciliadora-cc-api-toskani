@@ -1,6 +1,7 @@
 import base64
 import os
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 
 import requests
 
@@ -19,10 +20,16 @@ class PagarmeService:
         self.cache = {}
         self.omie_service = OmieService()
 
-    def consult_pagarme(self) -> str:
-        transactions = Transaction.objects.filter(received_value__isnull=True)
+    def consult_pagarme(self, sum_all: bool) -> str:
+        transactions = None
+        if sum_all:
+            transactions = Transaction.objects.filter(status__icontains="parcialmente")
+        else:
+            transactions = Transaction.objects.filter(received_value__isnull=True)
+
         with ThreadPoolExecutor(max_workers=10) as executor:
-            results = executor.map(self.consult_pagarme_by_nsu, transactions)
+            consult_func = partial(self.consult_pagarme_by_nsu, sum_all=sum_all)
+            results = executor.map(consult_func, transactions)
 
         updates = []
         for transaction, pagarme_data in zip(transactions, results):
@@ -43,8 +50,11 @@ class PagarmeService:
         )
 
         # TODO: Change when ready
+        # successful_updates = [
+        #     t for t in updates if t.status == "Pagamento recebido com sucesso"
+        # ]
         # with ThreadPoolExecutor(max_workers=10) as executor:
-        #     executor.map(self.process_transaction_updates, updates)
+        #     executor.map(self.process_transaction_updates, successful_updates)
 
         return "Success"
 
@@ -57,7 +67,7 @@ class PagarmeService:
         if transaction.account.omie_account_destiny:
             self.omie_service.transfer_omie_value(transaction)
 
-    def consult_pagarme_by_nsu(self, transaction: Transaction) -> dict:
+    def consult_pagarme_by_nsu(self, transaction: Transaction, sum_all: bool) -> dict:
         response_data = None
         if transaction.tid not in self.cache:
             url = f"{self.base_url}/{transaction.tid}/payables"
@@ -71,6 +81,28 @@ class PagarmeService:
             self.cache[transaction.tid] = response_data
 
             installment_number = int(transaction.installment.split("/")[0])
+
+            if sum_all:
+                filtered_payables = [
+                    payable
+                    for payable in response_data
+                    if payable.get("installment") == installment_number
+                    and payable.get("status") == "paid"
+                    and payable.get("amount") > 0
+                ]
+
+                total_received_value = sum(
+                    payable.get("amount") / 100 for payable in filtered_payables
+                )
+
+                if total_received_value <= 0:
+                    return {}
+
+                pagarme_data = {
+                    "received_value": total_received_value,
+                }
+
+                return pagarme_data
 
             installment_data = next(
                 (
