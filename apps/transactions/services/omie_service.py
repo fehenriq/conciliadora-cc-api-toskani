@@ -61,7 +61,7 @@ class OmieService:
             "call": "LancarRecebimento",
             "param": [
                 {
-                    "codigo_lancamento": 0,
+                    "codigo_lancamento": transaction.cod_id_omie,
                     "codigo_baixa": 0,
                     "codigo_conta_corrente": transaction.account.omie_account_origin.omie_id,
                     "valor": value,
@@ -88,11 +88,11 @@ class OmieService:
             "call": "IncluirLancCC",
             "param": [
                 {
-                    "cCodIntLanc": transaction.cod_id_omie,
+                    "cCodIntLanc": f"{transaction.tid}-{transaction.installment}-LT",
                     "cabecalho": {
                         "nCodCC": transaction.account.omie_account_origin.omie_id,
                         "dDtLanc": date,
-                        "nValorLanc": transaction.fee,
+                        "nValorLanc": transaction.acquirer_fee,
                     },
                     "detalhes": {
                         "cCodCateg": "2.05.04",
@@ -120,16 +120,16 @@ class OmieService:
             "call": "IncluirLancCC",
             "param": [
                 {
-                    "cCodIntLanc": transaction.cod_id_omie,
+                    "cCodIntLanc": f"{transaction.tid}-{transaction.installment}-TC",
                     "cabecalho": {
                         "nCodCC": transaction.account.omie_account_origin.omie_id,
                         "dDtLanc": date,
-                        "nValorLanc": transaction.balance,
+                        "nValorLanc": transaction.received_value - transaction.acquirer_fee,
                     },
                     "detalhes": {
-                        "cCodCateg": "2.05.04",
+                        "cCodCateg": "0.01.02",
                         "cTipo": doc_type,
-                        "cObs": "Lançamento via sistema Conciliadora CC",
+                        "cObs": "Transferência via sistema Conciliadora CC",
                     },
                     "transferencia": {
                         "nCodCCDestino": transaction.account.omie_account_destiny.omie_id

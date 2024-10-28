@@ -13,6 +13,7 @@ class TransactionAdmin(admin.ModelAdmin):
         "installment",
         "expected_value",
         "received_value",
+        "acquirer_fee",
         "value_difference",
         "status",
         "expected_date",

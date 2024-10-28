@@ -32,6 +32,6 @@ def sync_omie(request):
 
 
 @transaction_router.patch("/pagarme", response=str)
-def sync_pagarme(request, sum_all: bool):
+def sync_pagarme(request):
     decode_jwt_token(request.headers.get("Authorization"))
-    return pagarme_service.consult_pagarme(sum_all)
+    return pagarme_service.consult_pagarme()

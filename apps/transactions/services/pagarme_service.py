@@ -20,23 +20,23 @@ class PagarmeService:
         self.cache = {}
         self.omie_service = OmieService()
 
-    def consult_pagarme(self, sum_all: bool) -> str:
-        transactions = None
-        if sum_all:
-            transactions = Transaction.objects.filter(status__icontains="parcialmente")
-        else:
-            transactions = Transaction.objects.filter(received_value__isnull=True)
+    def consult_pagarme(self) -> str:
+        transactions = Transaction.objects.filter(received_value__isnull=True)
 
         with ThreadPoolExecutor(max_workers=10) as executor:
-            consult_func = partial(self.consult_pagarme_by_nsu, sum_all=sum_all)
+            consult_func = partial(self.consult_pagarme_by_nsu, sum_all=True)
             results = executor.map(consult_func, transactions)
 
         updates = []
         for transaction, pagarme_data in zip(transactions, results):
             if pagarme_data:
                 formatted_value = round(pagarme_data.get("received_value"), 2)
-                value_diff = transaction.expected_value - formatted_value
+                formatted_fee = round(pagarme_data.get("acquirer_fee"), 2)
+                value_diff = transaction.expected_value - (
+                    formatted_value - formatted_fee
+                )
                 transaction.received_value = formatted_value
+                transaction.acquirer_fee = formatted_fee
                 transaction.value_difference = value_diff
                 transaction.status = (
                     "Pagamento recebido com sucesso"
@@ -46,15 +46,12 @@ class PagarmeService:
                 updates.append(transaction)
 
         Transaction.objects.bulk_update(
-            updates, ["received_value", "value_difference", "status"]
+            updates, ["received_value", "acquirer_fee", "value_difference", "status"]
         )
 
         # TODO: Change when ready
-        # successful_updates = [
-        #     t for t in updates if t.status == "Pagamento recebido com sucesso"
-        # ]
         # with ThreadPoolExecutor(max_workers=10) as executor:
-        #     executor.map(self.process_transaction_updates, successful_updates)
+        #     executor.map(self.process_transaction_updates, updates)
 
         return "Success"
 
@@ -95,11 +92,16 @@ class PagarmeService:
                     payable.get("amount") / 100 for payable in filtered_payables
                 )
 
+                total_acquirer_fee = sum(
+                    payable.get("fee") / 100 for payable in filtered_payables
+                )
+
                 if total_received_value <= 0:
                     return {}
 
                 pagarme_data = {
                     "received_value": total_received_value,
+                    "acquirer_fee": total_acquirer_fee,
                 }
 
                 return pagarme_data
@@ -117,8 +119,10 @@ class PagarmeService:
 
             if installment_data:
                 received_value_real = installment_data.get("amount") / 100
+                acquirer_fee_real = installment_data.get("fee") / 100
                 pagarme_data = {
                     "received_value": received_value_real,
+                    "acquirer_fee": acquirer_fee_real,
                 }
                 return pagarme_data
 

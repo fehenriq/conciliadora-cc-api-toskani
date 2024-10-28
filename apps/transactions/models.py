@@ -22,6 +22,7 @@ class Transaction(models.Model):
     installment = models.CharField(max_length=255, blank=True, null=True)
 
     received_value = models.FloatField(blank=True, null=True)
+    acquirer_fee = models.FloatField(blank=True, null=True)
     value_difference = models.FloatField(blank=True, null=True)
     status = models.CharField(max_length=50, blank=True, null=True)
 
