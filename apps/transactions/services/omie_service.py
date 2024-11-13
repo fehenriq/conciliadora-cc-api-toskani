@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
 import requests
+from django.db import transaction as transaction_django
 
 from apps.accounts.models import Account, Installment, OmieAccount
 from apps.transactions.models import Transaction
@@ -13,17 +14,18 @@ class OmieService:
     def __init__(self):
         self.omie_app_key = str(os.getenv("OMIE_APP_KEY"))
         self.omie_app_secret = str(os.getenv("OMIE_APP_SECRET"))
-        self.base_url = "https://app.omie.com.br/api/v1/financas/"
+        self.base_url = "https://app.omie.com.br/api/v1/financas"
         self.headers = {"Content-Type": "application/json"}
 
     def create_transactions(self) -> str:
-        transaction_ids = self.get_omie_transactions()
-        with ThreadPoolExecutor(max_workers=3) as executor:
-            results = executor.map(self.consult_omie_transaction, transaction_ids)
+        with transaction_django.atomic():
+            transaction_ids = self.get_omie_transactions()
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                results = executor.map(self.consult_omie_transaction, transaction_ids)
 
-        transactions_data = [result for result in results if result]
-        self._bulk_create_transactions(transactions_data)
-        return "Success"
+            transactions_data = [result for result in results if result]
+            self._bulk_create_transactions(transactions_data)
+            return "Success"
 
     def consult_omie_transaction(self, omie_id: int) -> dict:
         payload = {
@@ -75,9 +77,9 @@ class OmieService:
 
         response = self._send_request(payload, "contareceber")
         if response and response.status_code == 200:
-            return "Success"
+            return True
 
-        return "Failed"
+        return False
 
     def launch_omie_fee(self, transaction: Transaction) -> str:
         date = datetime.now().strftime("%d/%m/%Y")
@@ -88,7 +90,7 @@ class OmieService:
             "call": "IncluirLancCC",
             "param": [
                 {
-                    "cCodIntLanc": f"{transaction.tid}-{transaction.installment}-LT",
+                    "cCodIntLanc": f"{transaction.tid}-{transaction.installment}",
                     "cabecalho": {
                         "nCodCC": transaction.account.omie_account_origin.omie_id,
                         "dDtLanc": date,
@@ -107,9 +109,9 @@ class OmieService:
 
         response = self._send_request(payload, "contacorrentelancamentos")
         if response and response.status_code == 200:
-            return "Success"
+            return True
 
-        return "Failed"
+        return False
 
     def transfer_omie_value(self, transaction: Transaction) -> str:
         date = datetime.now().strftime("%d/%m/%Y")
@@ -120,11 +122,12 @@ class OmieService:
             "call": "IncluirLancCC",
             "param": [
                 {
-                    "cCodIntLanc": f"{transaction.tid}-{transaction.installment}-TC",
+                    "cCodIntLanc": f"{transaction.tid}-{transaction.installment}",
                     "cabecalho": {
                         "nCodCC": transaction.account.omie_account_origin.omie_id,
                         "dDtLanc": date,
-                        "nValorLanc": transaction.received_value - transaction.acquirer_fee,
+                        "nValorLanc": transaction.received_value
+                        - transaction.acquirer_fee,
                     },
                     "detalhes": {
                         "cCodCateg": "0.01.02",
@@ -142,9 +145,9 @@ class OmieService:
 
         response = self._send_request(payload, "contacorrentelancamentos")
         if response and response.status_code == 200:
-            return "Success"
+            return True
 
-        return "Failed"
+        return False
 
     def get_omie_transactions(self) -> list:
         ids = []
@@ -227,10 +230,9 @@ class OmieService:
 
         Transaction.objects.bulk_create(transactions_to_create)
 
-        # TODO: Change when ready
-        # for transaction in transactions_to_create:
-        #     if not transaction.account.settle:
-        #         self.release_omie_receipt(transaction)
+        for transaction in transactions_to_create:
+            if transaction.account.settle:
+                self.release_omie_receipt(transaction)
 
     def _send_request(self, payload: dict, endpoint: str):
         try:
