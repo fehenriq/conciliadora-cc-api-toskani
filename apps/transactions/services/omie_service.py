@@ -52,7 +52,7 @@ class OmieService:
             }
         return {}
 
-    def release_omie_receipt(self, transaction: Transaction) -> str:
+    def release_omie_receipt(self, transaction: Transaction) -> bool:
         date = datetime.now().strftime("%d/%m/%Y")
         value = (
             transaction.received_value
@@ -81,7 +81,7 @@ class OmieService:
 
         return False
 
-    def launch_omie_fee(self, transaction: Transaction) -> str:
+    def launch_omie_fee(self, transaction: Transaction) -> bool:
         date = datetime.now().strftime("%d/%m/%Y")
         doc_type = (
             "CRT" if transaction.document_type in ["CREDIT", "DEBIT"] else "99999"
@@ -113,7 +113,7 @@ class OmieService:
 
         return False
 
-    def transfer_omie_value(self, transaction: Transaction) -> str:
+    def transfer_omie_value(self, transaction: Transaction) -> bool:
         date = datetime.now().strftime("%d/%m/%Y")
         doc_type = (
             "CRT" if transaction.document_type in ["CREDIT", "DEBIT"] else "99999"
@@ -163,8 +163,8 @@ class OmieService:
                         "pagina": page,
                         "registros_por_pagina": 20,
                         "apenas_importado_api": "N",
-                        "filtrar_por_data_de": date,
-                        "filtrar_por_data_ate": date,
+                        "filtrar_por_data_de": "01/11/2024",
+                        "filtrar_por_data_ate": "13/11/2024",
                     }
                 ],
                 "app_key": self.omie_app_key,
@@ -195,6 +195,8 @@ class OmieService:
 
     def _bulk_create_transactions(self, transactions_data: list) -> None:
         transactions_to_create = []
+        start_date = datetime(2024, 11, 1).date()
+
         for data in transactions_data:
             account_omie = OmieAccount.objects.get(omie_id=data["omie_account_id"])
             account = Account.objects.get(omie_account_origin=account_omie)
@@ -203,36 +205,39 @@ class OmieService:
             date_obj = datetime.strptime(data["expected_date"], "%d/%m/%Y").date()
             date_obj += timedelta(days=days_plus)
 
-            fee_number = int(data["fee"].split("/")[1])
-            installment = Installment.objects.get(
-                account=account, installment_number=fee_number
-            )
-            fee_percent = installment.fee
-            formatted_value = round(data["expected_value"], 2)
-            new_fee = round(formatted_value * (fee_percent / 100), 2)
-            new_balance = round(formatted_value - new_fee, 2)
+            if date_obj >= start_date:
+                fee_number = int(data["fee"].split("/")[1])
+                installment = Installment.objects.get(
+                    account=account, installment_number=fee_number
+                )
+                fee_percent = installment.fee
+                formatted_value = round(data["expected_value"], 2)
+                new_fee = round(formatted_value * (fee_percent / 100), 2)
+                new_balance = round(formatted_value - new_fee, 2)
 
-            doc_type = {"PIX": "PIX", "CRC": "CREDIT", "CRD": "DEBIT"}
-            transaction = Transaction(
-                cod_id_omie=data["cod_id_omie"],
-                account=account,
-                tid=data["tid"],
-                expected_value=formatted_value,
-                fee=new_fee,
-                balance=new_balance,
-                expected_date=date_obj,
-                accounts_receivable_note=data["accounts_receivable_note"],
-                document_type=doc_type[data["document_type"]],
-                installment=data["fee"],
-                status=data["status"],
-            )
-            transactions_to_create.append(transaction)
+                doc_type = {"PIX": "PIX", "CRC": "CREDIT", "CRD": "DEBIT"}
+                transaction = Transaction(
+                    cod_id_omie=data["cod_id_omie"],
+                    account=account,
+                    tid=data["tid"],
+                    expected_value=formatted_value,
+                    fee=new_fee,
+                    balance=new_balance,
+                    expected_date=date_obj,
+                    accounts_receivable_note=data["accounts_receivable_note"],
+                    document_type=doc_type[data["document_type"]],
+                    installment=data["fee"],
+                    status=data["status"],
+                )
+                transactions_to_create.append(transaction)
 
         Transaction.objects.bulk_create(transactions_to_create)
 
         for transaction in transactions_to_create:
             if transaction.account.settle:
-                self.release_omie_receipt(transaction)
+                if self.release_omie_receipt(transaction):
+                    transaction.omie_receipt_releasead = True
+                    transaction.save()
 
     def _send_request(self, payload: dict, endpoint: str):
         try:
