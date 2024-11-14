@@ -5,7 +5,7 @@ from functools import partial
 
 import requests
 from django.db import transaction as transaction_django
-from django.utils import timezone
+from django.db.models import Q
 
 from apps.transactions.models import Transaction
 from apps.transactions.services.omie_service import OmieService
@@ -23,15 +23,11 @@ class PagarmeService:
         self.omie_service = OmieService()
 
     def consult_pagarme(self) -> str:
-        current_date = timezone.now()
         transactions = Transaction.objects.filter(
-            # received_value__isnull=True,
-            expected_date__year=current_date.year,
-            expected_date__month=9,
+            Q(omie_receipt_releasead=False)
+            | Q(omie_fee_launched=False)
+            | Q(omie_value_transferred=False)
         )
-
-        for t in transactions:
-            print(f"{t.tid} - {t.installment} - {t.expected_date}")
 
         with transaction_django.atomic():
             with ThreadPoolExecutor(max_workers=5) as executor:
@@ -68,12 +64,21 @@ class PagarmeService:
 
     def process_transaction_updates(self, transaction: Transaction):
         if not transaction.account.settle:
-            self.omie_service.release_omie_receipt(transaction)
+            if not transaction.omie_receipt_releasead:
+                if self.omie_service.release_omie_receipt(transaction):
+                    transaction.omie_receipt_releasead = True
+                    transaction.save()
 
-        self.omie_service.launch_omie_fee(transaction)
+        if not transaction.omie_fee_launched:
+            if self.omie_service.launch_omie_fee(transaction):
+                transaction.omie_fee_launched = True
+                transaction.save()
 
         if transaction.account.omie_account_destiny:
-            self.omie_service.transfer_omie_value(transaction)
+            if not transaction.omie_value_transferred:
+                if self.omie_service.transfer_omie_value(transaction):
+                    transaction.omie_value_transferred = True
+                    transaction.save()
 
     def consult_pagarme_by_nsu(self, transaction: Transaction, sum_all: bool) -> dict:
         response_data = None
