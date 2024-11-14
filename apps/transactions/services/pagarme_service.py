@@ -6,6 +6,7 @@ from functools import partial
 import requests
 from django.db import transaction as transaction_django
 from django.db.models import Q
+from django.utils import timezone
 
 from apps.transactions.models import Transaction
 from apps.transactions.services.omie_service import OmieService
@@ -24,9 +25,12 @@ class PagarmeService:
 
     def consult_pagarme(self) -> str:
         transactions = Transaction.objects.filter(
-            Q(omie_receipt_releasead=False)
-            | Q(omie_fee_launched=False)
-            | Q(omie_value_transferred=False)
+            (
+                Q(omie_receipt_releasead=False)
+                | Q(omie_fee_launched=False)
+                | Q(omie_value_transferred=False)
+            )
+            & Q(expected_date__lte=timezone.now().date())
         )
 
         with transaction_django.atomic():
@@ -57,7 +61,9 @@ class PagarmeService:
                 ["received_value", "acquirer_fee", "value_difference", "status"],
             )
 
+            print(len(updates))
             for transaction in updates:
+                print(transaction.cod_id_omie)
                 self.process_transaction_updates(transaction)
 
             return "Success"
