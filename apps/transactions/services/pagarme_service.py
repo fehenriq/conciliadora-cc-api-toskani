@@ -1,6 +1,8 @@
 import base64
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from functools import partial
 
 import requests
@@ -34,7 +36,7 @@ class PagarmeService:
         )
 
         with transaction_django.atomic():
-            with ThreadPoolExecutor(max_workers=5) as executor:
+            with ThreadPoolExecutor(max_workers=3) as executor:
                 consult_func = partial(self.consult_pagarme_by_nsu, sum_all=True)
                 results = executor.map(consult_func, transactions)
 
@@ -49,6 +51,7 @@ class PagarmeService:
                     transaction.received_value = formatted_value
                     transaction.acquirer_fee = formatted_fee
                     transaction.value_difference = value_diff
+                    transaction.payment_date = pagarme_data.get("payment_date")
                     transaction.status = (
                         "Pagamento recebido com sucesso"
                         if abs(value_diff) <= tolerance
@@ -63,6 +66,7 @@ class PagarmeService:
 
             print(len(updates))
             for transaction in updates:
+                time.sleep(2)
                 print(transaction.cod_id_omie)
                 self.process_transaction_updates(transaction)
 
@@ -107,7 +111,7 @@ class PagarmeService:
                     for payable in response_data
                     if payable.get("installment") == installment_number
                     and payable.get("status") == "paid"
-                    and payable.get("amount") > 0
+                    and payable.get("amount", 0) > 0
                 ]
 
                 total_received_value = sum(
@@ -124,6 +128,9 @@ class PagarmeService:
                 pagarme_data = {
                     "received_value": total_received_value,
                     "acquirer_fee": total_acquirer_fee,
+                    "payment_date": datetime.fromisoformat(
+                        filtered_payables[-1].get("payment_date").rstrip("Z")
+                    ).date(),
                 }
 
                 return pagarme_data
@@ -145,6 +152,9 @@ class PagarmeService:
                 pagarme_data = {
                     "received_value": received_value_real,
                     "acquirer_fee": acquirer_fee_real,
+                    "payment_date": datetime.fromisoformat(
+                        installment_data.get("payment_date").rstrip("Z")
+                    ).date(),
                 }
                 return pagarme_data
 

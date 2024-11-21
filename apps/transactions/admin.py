@@ -13,10 +13,6 @@ class TransactionAdmin(admin.ModelAdmin):
         "omie_value_transferred",
         "tid",
         "installment",
-        "expected_value",
-        "received_value",
-        "acquirer_fee",
-        "value_difference",
         "status",
         "expected_date",
     )
@@ -30,3 +26,4 @@ class TransactionAdmin(admin.ModelAdmin):
     )
     search_fields = ("cod_id_omie", "tid")
     readonly_fields = ("value_difference", "received_value")
+    list_per_page = 250

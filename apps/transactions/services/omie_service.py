@@ -49,11 +49,17 @@ class OmieService:
                 "accounts_receivable_note": transaction.get("observacao", "NULO"),
                 "document_type": transaction.get("codigo_tipo_documento", "NULO"),
                 "status": "Aguardando pagamento",
+                "status_titulo": transaction.get("status_titulo", "NULO"),
             }
         return {}
 
     def release_omie_receipt(self, transaction: Transaction) -> bool:
         date = datetime.now().strftime("%d/%m/%Y")
+        payment_date = (
+            transaction.payment_date.strftime("%d/%m/%Y")
+            if transaction.payment_date
+            else None
+        )
         value = (
             transaction.received_value
             if transaction.received_value
@@ -67,7 +73,7 @@ class OmieService:
                     "codigo_baixa": 0,
                     "codigo_conta_corrente": transaction.account.omie_account_origin.omie_id,
                     "valor": value,
-                    "data": date,
+                    "data": payment_date if payment_date else date,
                     "observacao": "Baixa via sistema Conciliadora CC",
                 }
             ],
@@ -83,6 +89,11 @@ class OmieService:
 
     def launch_omie_fee(self, transaction: Transaction) -> bool:
         date = datetime.now().strftime("%d/%m/%Y")
+        payment_date = (
+            transaction.payment_date.strftime("%d/%m/%Y")
+            if transaction.payment_date
+            else None
+        )
         doc_type = (
             "CRT" if transaction.document_type in ["CREDIT", "DEBIT"] else "99999"
         )
@@ -93,7 +104,7 @@ class OmieService:
                     "cCodIntLanc": f"{transaction.tid}-{transaction.installment}",
                     "cabecalho": {
                         "nCodCC": transaction.account.omie_account_origin.omie_id,
-                        "dDtLanc": date,
+                        "dDtLanc": payment_date if payment_date else date,
                         "nValorLanc": transaction.acquirer_fee,
                     },
                     "detalhes": {
@@ -115,6 +126,11 @@ class OmieService:
 
     def transfer_omie_value(self, transaction: Transaction) -> bool:
         date = datetime.now().strftime("%d/%m/%Y")
+        payment_date = (
+            transaction.payment_date.strftime("%d/%m/%Y")
+            if transaction.payment_date
+            else None
+        )
         doc_type = (
             "CRT" if transaction.document_type in ["CREDIT", "DEBIT"] else "99999"
         )
@@ -125,7 +141,7 @@ class OmieService:
                     "cCodIntLanc": f"{transaction.tid}-{transaction.installment}",
                     "cabecalho": {
                         "nCodCC": transaction.account.omie_account_origin.omie_id,
-                        "dDtLanc": date,
+                        "dDtLanc": payment_date if payment_date else date,
                         "nValorLanc": transaction.received_value
                         - transaction.acquirer_fee,
                     },
@@ -163,8 +179,8 @@ class OmieService:
                         "pagina": page,
                         "registros_por_pagina": 20,
                         "apenas_importado_api": "N",
-                        "filtrar_por_data_de": "01/11/2024",
-                        "filtrar_por_data_ate": "13/11/2024",
+                        "filtrar_por_data_de": date,
+                        "filtrar_por_data_ate": date,
                     }
                 ],
                 "app_key": self.omie_app_key,

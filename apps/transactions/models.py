@@ -24,6 +24,7 @@ class Transaction(models.Model):
     received_value = models.FloatField(blank=True, null=True)
     acquirer_fee = models.FloatField(blank=True, null=True)
     value_difference = models.FloatField(blank=True, null=True)
+    payment_date = models.DateField(blank=True, null=True)
     status = models.CharField(max_length=50, blank=True, null=True)
 
     omie_receipt_releasead = models.BooleanField(default=False)
