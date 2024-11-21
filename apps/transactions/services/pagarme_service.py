@@ -30,7 +30,10 @@ class PagarmeService:
             (
                 Q(omie_receipt_releasead=False)
                 | Q(omie_fee_launched=False)
-                | Q(omie_value_transferred=False)
+                | (
+                    Q(omie_value_transferred=False)
+                    & Q(account__omie_account_destiny__isnull=False)
+                )
             )
             & Q(expected_date__lte=timezone.now().date())
         )
