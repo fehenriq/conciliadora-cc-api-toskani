@@ -26,6 +26,8 @@ class Transaction(models.Model):
     value_difference = models.FloatField(blank=True, null=True)
     payment_date = models.DateField(blank=True, null=True)
     status = models.CharField(max_length=50, blank=True, null=True)
+    project = models.BigIntegerField(blank=True, null=True)
+    department = models.CharField(max_length=50, blank=True, null=True)
 
     omie_receipt_releasead = models.BooleanField(default=False)
     omie_fee_launched = models.BooleanField(default=False)

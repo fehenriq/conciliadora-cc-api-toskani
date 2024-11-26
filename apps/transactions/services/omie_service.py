@@ -50,6 +50,10 @@ class OmieService:
                 "document_type": transaction.get("codigo_tipo_documento", "NULO"),
                 "status": "Aguardando pagamento",
                 "status_titulo": transaction.get("status_titulo", "NULO"),
+                "project": transaction.get("codigo_projeto", None),
+                "department": (transaction.get("distribuicao") or [{}])[0].get(
+                    "cCodDep", None
+                ),
             }
         return {}
 
@@ -97,23 +101,35 @@ class OmieService:
         doc_type = (
             "CRT" if transaction.document_type in ["CREDIT", "DEBIT"] else "99999"
         )
+        detalhes = {
+            "cCodCateg": "2.05.04",
+            "cTipo": doc_type,
+            "cObs": "Lançamento via sistema Conciliadora CC",
+        }
+
+        if transaction.project:
+            detalhes["nCodProjeto"] = transaction.project
+
+        param_item = {
+            "cCodIntLanc": f"{transaction.tid}-{transaction.installment}",
+            "cabecalho": {
+                "nCodCC": transaction.account.omie_account_origin.omie_id,
+                "dDtLanc": payment_date if payment_date else date,
+                "nValorLanc": transaction.acquirer_fee,
+            },
+            "detalhes": detalhes,
+        }
+
+        if transaction.department:
+            param_item["departamentos"] = {
+                "cCodDep": transaction.department,
+                "nPerDep": 100,
+                "nValDep": transaction.acquirer_fee,
+            }
+
         payload = {
             "call": "IncluirLancCC",
-            "param": [
-                {
-                    "cCodIntLanc": f"{transaction.tid}-{transaction.installment}",
-                    "cabecalho": {
-                        "nCodCC": transaction.account.omie_account_origin.omie_id,
-                        "dDtLanc": payment_date if payment_date else date,
-                        "nValorLanc": transaction.acquirer_fee,
-                    },
-                    "detalhes": {
-                        "cCodCateg": "2.05.04",
-                        "cTipo": doc_type,
-                        "cObs": "Lançamento via sistema Conciliadora CC",
-                    },
-                }
-            ],
+            "param": [param_item],
             "app_key": self.omie_app_key,
             "app_secret": self.omie_app_secret,
         }
@@ -134,27 +150,38 @@ class OmieService:
         doc_type = (
             "CRT" if transaction.document_type in ["CREDIT", "DEBIT"] else "99999"
         )
+        detalhes = {
+            "cCodCateg": "0.01.02",
+            "cTipo": doc_type,
+            "cObs": "Transferência via sistema Conciliadora CC",
+        }
+
+        if transaction.project:
+            detalhes["nCodProjeto"] = transaction.project
+
+        param_item = {
+            "cCodIntLanc": f"{transaction.tid}-{transaction.installment}",
+            "cabecalho": {
+                "nCodCC": transaction.account.omie_account_origin.omie_id,
+                "dDtLanc": payment_date if payment_date else date,
+                "nValorLanc": transaction.received_value - transaction.acquirer_fee,
+            },
+            "detalhes": detalhes,
+            "transferencia": {
+                "nCodCCDestino": transaction.account.omie_account_destiny.omie_id,
+            },
+        }
+
+        if transaction.department:
+            param_item["departamentos"] = {
+                "cCodDep": transaction.department,
+                "nPerDep": 100,
+                "nValDep": transaction.received_value - transaction.acquirer_fee,
+            }
+
         payload = {
             "call": "IncluirLancCC",
-            "param": [
-                {
-                    "cCodIntLanc": f"{transaction.tid}-{transaction.installment}",
-                    "cabecalho": {
-                        "nCodCC": transaction.account.omie_account_origin.omie_id,
-                        "dDtLanc": payment_date if payment_date else date,
-                        "nValorLanc": transaction.received_value
-                        - transaction.acquirer_fee,
-                    },
-                    "detalhes": {
-                        "cCodCateg": "0.01.02",
-                        "cTipo": doc_type,
-                        "cObs": "Transferência via sistema Conciliadora CC",
-                    },
-                    "transferencia": {
-                        "nCodCCDestino": transaction.account.omie_account_destiny.omie_id
-                    },
-                }
-            ],
+            "param": [param_item],
             "app_key": self.omie_app_key,
             "app_secret": self.omie_app_secret,
         }
@@ -244,6 +271,8 @@ class OmieService:
                     document_type=doc_type[data["document_type"]],
                     installment=data["fee"],
                     status=data["status"],
+                    project=data["project"],
+                    department=data["department"],
                 )
                 transactions_to_create.append(transaction)
 
