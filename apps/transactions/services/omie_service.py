@@ -102,7 +102,7 @@ class OmieService:
             "CRT" if transaction.document_type in ["CREDIT", "DEBIT"] else "99999"
         )
         detalhes = {
-            "cCodCateg": "2.05.04",
+            "cCodCateg": "2.05.02",
             "cTipo": doc_type,
             "cObs": "Lançamento via sistema Conciliadora CC",
         }
