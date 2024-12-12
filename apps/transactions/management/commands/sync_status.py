@@ -24,6 +24,8 @@ class Command(BaseCommand):
             & Q(expected_date__lte=timezone.now().date())
         )
 
+        print(transactions.count())
+
         for transaction in transactions:
             cod_id_omie = transaction.cod_id_omie
             self.stdout.write(f"Consultando cod_id_omie: {cod_id_omie}")
