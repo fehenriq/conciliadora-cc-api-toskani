@@ -57,6 +57,36 @@ class OmieService:
             }
         return {}
 
+    def consult_omie_fee(self):
+        nPage = 1
+        nPerPage = 500
+        codes = []
+
+        while True:
+            payload = {
+                "call": "ListarLancCC",
+                "param": [{"nPagina": nPage, "nRegPorPagina": nPerPage}],
+                "app_key": self.omie_app_key,
+                "app_secret": self.omie_app_secret,
+            }
+
+            response = self._send_request(payload, "contacorrentelancamentos")
+
+            if response and response.status_code == 200:
+                data = response.json()
+                fees = data.get("listaLancamentos", [])
+
+                if not fees:
+                    break
+
+                codes.extend(item.get("cCodIntLanc") for item in fees)
+
+                nPage += 1
+            else:
+                raise Exception("Erro ao consultar API OMIE")
+
+        return codes
+
     def release_omie_receipt(self, transaction: Transaction) -> bool:
         date = datetime.now().strftime("%d/%m/%Y")
         payment_date = (
@@ -67,6 +97,7 @@ class OmieService:
         value = (
             transaction.received_value
             if transaction.received_value
+            and transaction.received_value <= transaction.expected_value
             else transaction.expected_value
         )
         payload = {
@@ -123,7 +154,6 @@ class OmieService:
         if transaction.department:
             param_item["departamentos"] = {
                 "cCodDep": transaction.department,
-                "nPerDep": 100,
                 "nValDep": transaction.acquirer_fee,
             }
 
@@ -175,7 +205,6 @@ class OmieService:
         if transaction.department:
             param_item["departamentos"] = {
                 "cCodDep": transaction.department,
-                "nPerDep": 100,
                 "nValDep": transaction.received_value - transaction.acquirer_fee,
             }
 

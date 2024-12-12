@@ -81,17 +81,20 @@ class PagarmeService:
                 if self.omie_service.release_omie_receipt(transaction):
                     transaction.omie_receipt_releasead = True
                     transaction.save()
+                    print("Release Receipt: OK")
 
         if not transaction.omie_fee_launched:
             if self.omie_service.launch_omie_fee(transaction):
                 transaction.omie_fee_launched = True
                 transaction.save()
+                print("Launch Fee: OK")
 
         if transaction.account.omie_account_destiny:
             if not transaction.omie_value_transferred:
                 if self.omie_service.transfer_omie_value(transaction):
                     transaction.omie_value_transferred = True
                     transaction.save()
+                    print("Transfer Value: OK")
 
     def consult_pagarme_by_nsu(self, transaction: Transaction, sum_all: bool) -> dict:
         response_data = None
