@@ -1,3 +1,4 @@
+from datetime import datetime
 from django.core.management.base import BaseCommand
 from django.db.models import Q
 from django.utils import timezone
@@ -22,6 +23,7 @@ class Command(BaseCommand):
                 )
             )
             & Q(expected_date__lte=timezone.now().date())
+            & Q(expected_date__gte=datetime(2024, 11, 1))
         )
 
         print(transactions.count())
