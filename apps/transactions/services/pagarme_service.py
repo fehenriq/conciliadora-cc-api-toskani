@@ -120,12 +120,20 @@ class PagarmeService:
                     and payable.get("amount", 0) > 0
                 ]
 
+                payables_by_date = {}
+                for payable in filtered_payables:
+                    payment_date = payable.get("payment_date")
+                    if payment_date not in payables_by_date or payable.get(
+                        "amount"
+                    ) > payables_by_date[payment_date].get("amount"):
+                        payables_by_date[payment_date] = payable
+
                 total_received_value = sum(
-                    payable.get("amount") / 100 for payable in filtered_payables
+                    payable.get("amount") / 100 for payable in payables_by_date.values()
                 )
 
                 total_acquirer_fee = sum(
-                    payable.get("fee") / 100 for payable in filtered_payables
+                    payable.get("fee") / 100 for payable in payables_by_date.values()
                 )
 
                 if total_received_value <= 0:
@@ -135,7 +143,12 @@ class PagarmeService:
                     "received_value": total_received_value,
                     "acquirer_fee": total_acquirer_fee,
                     "payment_date": datetime.fromisoformat(
-                        filtered_payables[-1].get("payment_date").rstrip("Z")
+                        max(
+                            payables_by_date.values(),
+                            key=lambda x: x.get("payment_date"),
+                        )
+                        .get("payment_date")
+                        .rstrip("Z")
                     ).date(),
                 }
 
