@@ -45,7 +45,7 @@ class OmieService:
                 "expected_value": transaction.get("valor_documento", 0.0),
                 "fee": transaction.get("numero_parcela", "001/001"),
                 "balance": 0.0,
-                "expected_date": transaction.get("data_previsao", "NULO"),
+                "expected_date": transaction.get("data_registro", "NULO"),
                 "accounts_receivable_note": transaction.get("observacao", "NULO"),
                 "document_type": transaction.get("codigo_tipo_documento", "NULO"),
                 "status": "Aguardando pagamento",
