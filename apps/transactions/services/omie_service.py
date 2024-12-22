@@ -273,7 +273,8 @@ class OmieService:
             account_omie = OmieAccount.objects.get(omie_id=data["omie_account_id"])
             account = Account.objects.get(omie_account_origin=account_omie)
 
-            days_plus = account.days_to_receive
+            installment_int = int(data["fee"].split("/")[0])
+            days_plus = ((installment_int - 1) * 30) + account.days_to_receive
             date_obj = datetime.strptime(data["expected_date"], "%d/%m/%Y").date()
             date_obj += timedelta(days=days_plus)
 
