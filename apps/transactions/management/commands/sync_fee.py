@@ -26,7 +26,7 @@ class Command(BaseCommand):
                 )
             )
             & Q(expected_date__lte=timezone.now().date())
-            & Q(expected_date__gte=datetime(2024, 11, 1))
+            & Q(expected_date__gte=datetime(2024, 12, 1))
         )
 
         print(transactions.count())
