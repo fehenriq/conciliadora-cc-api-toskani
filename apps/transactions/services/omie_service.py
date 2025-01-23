@@ -45,7 +45,7 @@ class OmieService:
                 "expected_value": transaction.get("valor_documento", 0.0),
                 "fee": transaction.get("numero_parcela", "001/001"),
                 "balance": 0.0,
-                "expected_date": transaction.get("data_previsao", "NULO"),
+                "expected_date": transaction.get("data_registro", "NULO"),
                 "accounts_receivable_note": transaction.get("observacao", "NULO"),
                 "document_type": transaction.get("codigo_tipo_documento", "NULO"),
                 "status": "Aguardando pagamento",
@@ -276,7 +276,11 @@ class OmieService:
             doc_type = {"PIX": "PIX", "CRC": "CREDIT", "CRD": "DEBIT"}
             doc_chosen = doc_type[data["document_type"]]
 
-            days_plus = account.days_to_receive
+            doc_type = {"PIX": "PIX", "CRC": "CREDIT", "CRD": "DEBIT"}
+            doc_chosen = doc_type[data["document_type"]]
+
+            installment_int = int(data["fee"].split("/")[0])
+            days_plus = ((installment_int - 1) * 30) + account.days_to_receive
             date_obj = datetime.strptime(data["expected_date"], "%d/%m/%Y").date()
 
             if doc_type != "PIX":
