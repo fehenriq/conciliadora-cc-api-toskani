@@ -49,11 +49,12 @@ class OmieService:
                 "accounts_receivable_note": transaction.get("observacao", "NULO"),
                 "document_type": transaction.get("codigo_tipo_documento", "NULO"),
                 "status": "Aguardando pagamento",
-                "status_titulo": transaction.get("status_titulo", "NULO"),
+                "title_status": transaction.get("status_titulo", "NULO"),
                 "project": transaction.get("codigo_projeto", None),
                 "department": (transaction.get("distribuicao") or [{}])[0].get(
                     "cCodDep", None
                 ),
+                "order_number": transaction.get("numero_pedido", "NULO"),
             }
         return {}
 
@@ -307,6 +308,7 @@ class OmieService:
                     status=data["status"],
                     project=data["project"],
                     department=data["department"],
+                    order_number=data["order_number"],
                 )
                 transactions_to_create.append(transaction)
 

@@ -33,13 +33,13 @@ class Command(BaseCommand):
             self.stdout.write(f"Consultando cod_id_omie: {cod_id_omie}")
 
             if result := omie_service.consult_omie_transaction(cod_id_omie):
-                status_titulo = result.get("status_titulo")
+                title_status = result.get("title_status")
                 self.stdout.write(
-                    f"Transação {cod_id_omie} consultada com sucesso: {status_titulo}"
+                    f"Transação {cod_id_omie} consultada com sucesso: {title_status}"
                 )
 
                 if (
-                    status_titulo == "RECEBIDO"
+                    title_status == "RECEBIDO"
                     and not transaction.omie_receipt_releasead
                 ):
                     transaction.omie_receipt_releasead = True
