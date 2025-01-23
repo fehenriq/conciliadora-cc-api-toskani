@@ -1,12 +1,12 @@
 from django.core.management.base import BaseCommand
 
-from apps.transactions.services.pagarme_service import PagarmeService
+from apps.transactions.services.toskani_service import ToskaniService
 
 
 class Command(BaseCommand):
     help = "Consulta cada Transaction pelo cod_id_pagarme e atualiza com os dados da API Pagarme."
 
     def handle(self, *args, **kwargs):
-        pagarme_service = PagarmeService()
+        toskani_service = ToskaniService()
 
-        pagarme_service.consult_pagarme()
+        toskani_service.consult_toskani()

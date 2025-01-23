@@ -4,13 +4,13 @@ from utils.jwt import JWTAuth, decode_jwt_token
 
 from .schema import TransactionListSchema
 from .services.omie_service import OmieService
-from .services.pagarme_service import PagarmeService
+from .services.toskani_service import ToskaniService
 from .services.transactions_service import TransactionService
 
 transaction_router = Router(auth=JWTAuth())
 transaction_service = TransactionService()
 omie_service = OmieService()
-pagarme_service = PagarmeService()
+toskani_service = ToskaniService()
 
 
 @transaction_router.get("", response=TransactionListSchema)
@@ -31,7 +31,7 @@ def sync_omie(request):
     return omie_service.create_transactions()
 
 
-@transaction_router.patch("/pagarme", response=str)
-def sync_pagarme(request):
+@transaction_router.patch("/toskani", response=str)
+def sync_toskani(request):
     decode_jwt_token(request.headers.get("Authorization"))
-    return pagarme_service.consult_pagarme()
+    return toskani_service.consult_toskani()
