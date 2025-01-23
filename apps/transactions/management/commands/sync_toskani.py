@@ -4,7 +4,7 @@ from apps.transactions.services.toskani_service import ToskaniService
 
 
 class Command(BaseCommand):
-    help = "Consulta cada Transaction pelo cod_id_pagarme e atualiza com os dados da API Pagarme."
+    help = "Consulta cada Transaction e atualiza com os dados da API Toskani."
 
     def handle(self, *args, **kwargs):
         toskani_service = ToskaniService()

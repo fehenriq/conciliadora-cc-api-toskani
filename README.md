@@ -54,7 +54,7 @@ A Conciliadora CC API adota os princípios REST e oferece as seguintes rotas pri
 
 - `GET /api/transactions`: Lista todas as transações registradas.
 - `POST /api/transactions/omie`: Sincroniza transações utilizando a API Omie.
-- `PATCH /api/transactions/pagarme`: Sincroniza transações com a API Pagar.Me.
+- `PATCH /api/transactions/toskani`: Sincroniza transações com a API Pagar.Me.
 
 ## 🔐 Autenticação
 
