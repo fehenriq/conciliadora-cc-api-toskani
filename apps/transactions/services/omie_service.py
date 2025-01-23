@@ -273,9 +273,14 @@ class OmieService:
             account_omie = OmieAccount.objects.get(omie_id=data["omie_account_id"])
             account = Account.objects.get(omie_account_origin=account_omie)
 
+            doc_type = {"PIX": "PIX", "CRC": "CREDIT", "CRD": "DEBIT"}
+            doc_chosen = doc_type[data["document_type"]]
+
             days_plus = account.days_to_receive
             date_obj = datetime.strptime(data["expected_date"], "%d/%m/%Y").date()
-            date_obj += timedelta(days=days_plus)
+
+            if doc_type != "PIX":
+                date_obj += timedelta(days=days_plus)
 
             if date_obj >= start_date:
                 fee_number = int(data["fee"].split("/")[1])
@@ -287,7 +292,6 @@ class OmieService:
                 new_fee = round(formatted_value * (fee_percent / 100), 2)
                 new_balance = round(formatted_value - new_fee, 2)
 
-                doc_type = {"PIX": "PIX", "CRC": "CREDIT", "CRD": "DEBIT"}
                 transaction = Transaction(
                     cod_id_omie=data["cod_id_omie"],
                     account=account,
@@ -297,7 +301,7 @@ class OmieService:
                     balance=new_balance,
                     expected_date=date_obj,
                     accounts_receivable_note=data["accounts_receivable_note"],
-                    document_type=doc_type[data["document_type"]],
+                    document_type=doc_chosen,
                     installment=data["fee"],
                     status=data["status"],
                     project=data["project"],
