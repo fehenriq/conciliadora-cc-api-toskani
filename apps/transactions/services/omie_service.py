@@ -276,12 +276,9 @@ class OmieService:
             doc_type = {"PIX": "PIX", "CRC": "CREDIT", "CRD": "DEBIT"}
             doc_chosen = doc_type[data["document_type"]]
 
-            doc_type = {"PIX": "PIX", "CRC": "CREDIT", "CRD": "DEBIT"}
-            doc_chosen = doc_type[data["document_type"]]
-
             installment_int = int(data["fee"].split("/")[0])
-            days_plus = ((installment_int - 1) * 30) + account.days_to_receive
             date_obj = datetime.strptime(data["expected_date"], "%d/%m/%Y").date()
+            days_plus = ((installment_int - 1) * 30) + account.days_to_receive
 
             if doc_type != "PIX":
                 date_obj += timedelta(days=days_plus)
