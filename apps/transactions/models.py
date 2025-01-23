@@ -20,6 +20,7 @@ class Transaction(models.Model):
         choices=[("DEBIT", "Debit"), ("CREDIT", "Credit"), ("PIX", "Pix")],
     )
     installment = models.CharField(max_length=255, blank=True, null=True)
+    order_number = models.CharField(max_length=15, blank=True, null=True)
 
     received_value = models.FloatField(blank=True, null=True)
     acquirer_fee = models.FloatField(blank=True, null=True)
