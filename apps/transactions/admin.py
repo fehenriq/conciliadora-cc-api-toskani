@@ -7,6 +7,7 @@ from .models import Transaction
 class TransactionAdmin(admin.ModelAdmin):
     list_display = (
         "cod_id_omie",
+        "acquirer_fee",
         "document_type",
         "omie_receipt_releasead",
         "omie_fee_launched",
@@ -18,6 +19,7 @@ class TransactionAdmin(admin.ModelAdmin):
     )
     list_filter = (
         "document_type",
+        "acquirer_fee",
         "status",
         "expected_date",
         "omie_receipt_releasead",
